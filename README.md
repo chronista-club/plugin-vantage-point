@@ -1,6 +1,6 @@
 # Vantage Point Plugin
 
-Claude Code plugin for AI-native development — board visualization, parallel lanes, wire inter-agent communication, dev-flow orchestration, and GUI live tuning.
+Shared Claude Code / Codex plugin for AI-native development — board visualization, parallel lanes, wire inter-agent communication, dev-flow orchestration, and GUI live tuning.
 
 ## Features
 
@@ -24,7 +24,7 @@ Claude Code plugin for AI-native development — board visualization, parallel l
 
 ## MCP サーバの宣言
 
-本プラグインはリポジトリ直下の `.mcp.json` で MCP サーバを宣言します。**プラグインを入れれば `mcp__vantage-point__*` が使えます**（別途の手動設定は不要）。
+本プラグインはリポジトリ直下の `.mcp.json` で MCP サーバを宣言します。**プラグインを入れれば `mcp__vantage-point__*` が使えます**（ホストでの有効化と実行許可が必要）。
 
 ```json
 {
@@ -34,13 +34,13 @@ Claude Code plugin for AI-native development — board visualization, parallel l
 }
 ```
 
-> ⚠️ **`vp` が PATH に無い環境ではセッションごとに接続エラーが出ます。** バイナリ配布（brew）と MCP 宣言は別レイヤーで、VP は Rust + WebView の GUI アプリのため creo-memories 方式（クラウド）も team-bucciarati 方式（バイナリ同梱）も採れません。「brew で本体を入れ、プラグインが宣言する」が構造上の前提です。
+> ⚠️ **`vp` が PATH に無い環境ではセッションごとに接続エラーが出ます。** バイナリ配布（brew）と MCP 宣言は別レイヤーで、VP は Rust + WebView の GUI アプリのため creo-memories 方式（クラウド）も プラグインだけも採れません。「brew で本体を入れ、プラグインが宣言する」が構造上の前提です。
 
 ## Installation
 
 ```bash
 # From GitHub marketplace
-/plugin marketplace add chronista-club/claude-plugins
+/plugin marketplace add chronista-club/chronista-plugins
 claude plugin install vantage-point@chronista-plugins
 ```
 
@@ -136,3 +136,9 @@ lane address は **`<repo>/root` / `<repo>/<name>`**（`/Sub/` セグメント�
 ## License
 
 MIT
+
+## 共通配布
+
+Claude Code / Codex は同じ `skills/` を使います。[ホスト対応と検証範囲](docs/host-support.md)を参照してください。カタログは [chronista-plugins](https://github.com/chronista-club/chronista-plugins)。
+
+Codex はカタログ追加後 `codex plugin add vantage-point@chronista-plugins` で登録する。共有 skills はホストのスキル一覧から呼び出す。

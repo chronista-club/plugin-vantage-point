@@ -8,6 +8,11 @@
 
 set -euo pipefail
 
+# Hosts may launch hooks outside the project. Resolve the event cwd first.
+EVENT_CWD=$(python3 -c 'import json,sys; d=json.load(sys.stdin); p=d.get("cwd"); assert isinstance(p,str) and p; print(p)' 2>/dev/null) || exit 0
+cd "$EVENT_CWD" 2>/dev/null || exit 0
+
+
 # vp コマンドの存在チェック
 if ! command -v vp &>/dev/null; then
   exit 0
@@ -28,15 +33,61 @@ if echo "$CURRENT_DIR" | grep -q "/\.vp/lanes/"; then
   IN_LANE="true"
 fi
 
-# コンテキストを構築
+# コンテキストを構築 (実際の改行のまま組み、JSON 化は最後の encoder に任せる)
 if [ -n "$IN_LANE" ]; then
-  CONTEXT="## VP Lane 環境\n\n現在 lane (作業台) 内で作業中です。\nパス: ${CURRENT_DIR}\n\n### この repo の lane 一覧\n\`\`\`\n${LANE_LIST}\n\`\`\`\n\nlane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。\n管理: vp lane ls --detail / vp lane rm <name> / vp lane status"
+  CONTEXT=$(cat <<EOF
+## VP Lane 環境
+
+現在 lane (作業台) 内で作業中です。
+パス: ${CURRENT_DIR}
+
+### この repo の lane 一覧
+\`\`\`
+${LANE_LIST}
+\`\`\`
+
+lane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。
+管理: vp lane ls --detail / vp lane rm <name> / vp lane status
+EOF
+)
 else
-  CONTEXT="## VP Lane 環境\n\nアクティブな lane があります。\n\n### lane 一覧\n\`\`\`\n${LANE_LIST}\n\`\`\`\n\nlane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。\n管理: vp lane ls --detail / vp lane new <name> <branch> / vp lane rm <name>"
+  CONTEXT=$(cat <<EOF
+## VP Lane 環境
+
+アクティブな lane があります。
+
+### lane 一覧
+\`\`\`
+${LANE_LIST}
+\`\`\`
+
+lane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。
+管理: vp lane ls --detail / vp lane new <name> <branch> / vp lane rm <name>
+EOF
+)
+fi
+
+# --- JSON エンコード ---
+# `vp lane ls` の出力はタブ区切りの複数行。これを文字列連結で JSON に埋めると
+# 生の改行が "Unterminated string" を、タブが制御文字エラーを起こす (2026-09-06 実測)。
+# 必ず encoder に通すこと。python3 が無い環境のために sed/awk の fallback を持つ。
+escaped=$(printf '%s' "$CONTEXT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || true)
+
+if [ -z "$escaped" ]; then
+  TAB=$(printf '\t')
+  escaped=$(printf '%s' "$CONTEXT" \
+    | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e "s/${TAB}/\\\\t/g" \
+    | awk '{printf "%s\\n", $0}')
+  escaped="\"${escaped%\\n}\""
 fi
 
 cat <<EOF
 {
-  "additionalContext": "${CONTEXT}"
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": ${escaped}
+  }
 }
 EOF
+
+exit 0

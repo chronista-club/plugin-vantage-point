@@ -1,16 +1,16 @@
 ---
 name: vantage-point
-description: AI ネイティブ開発環境 — board 視覚化、並列 lane 展開、wire inter-agent 通信、dev-flow orchestration、GUI live tuning を実現する MCP server。Claude Code 用 dashboard tool
-version: 0.21.1
-tags:
-  - dashboard
-  - board
-  - mcp
-  - inter-agent
-  - lane
-  - dev-flow
-  - gui-tuning
+description: AI ネイティブ開発環境 — board 視覚化、並列 lane 展開、wire inter-agent 通信、dev-flow orchestration、GUI
+  live tuning を実現する MCP server。Claude Code 用 dashboard tool
+metadata:
+  version: 0.24.0
+  tags: dashboard, board, mcp, inter-agent, lane, dev-flow, gui-tuning
 ---
+
+## ホスト共通の読み方
+
+このディレクトリが共有定義の正本。Claude Code は `.claude-plugin`、Codex は `.codex-plugin` から同じ skills を読む。Grok CLI は Claude 互換形式を対象とするが実機確認待ち。
+本文中の `Agent`、`Bash`、`Read` や MCP の名前は Claude 表記の例。利用中のホストで提供された同等のツールを発見して使う。存在しないツール・モデル・実行結果を仮定しない。`${CLAUDE_PLUGIN_ROOT}` の資料パスは、この skill から辿れるプラグインルートに読み替える。
 
 # Vantage Point
 

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.24.0] - 2026-09-06
+
+- 新しい plugin-vantage-point リポジトリを正本とし、Claude Code / Codex の共有 skills と配布定義を追加。
+- ホスト固有の前提を明記し、検証・CI・安定配布経路を整備。
+
 ## 0.23.0 (2026-09-01)
 
 - feat: **`.mcp.json` を追加** — プラグインが `vp mcp` を stdio MCP サーバとして宣言する。これまで **VP プラグインを入れても MCP ツールは付いてこなかった**（commands / skills / hooks のみ）。mako 環境で `mcp__vantage-point__*` が使えていたのは個人の共有 config store が宣言を肩代わりしていたためで、他の環境では再現しなかった。`{"command": "vp", "args": ["mcp"]}` は個人パスを含まずポータブル。`.mcp.json` はプラグインルートの MCP 自動検出位置で、公式に推奨される宣言方式（plugin-dev `mcp-integration` の Method 1）。既存 2 プラグイン（creo-memories = http / team-bucciarati = バイナリ同梱）と同じ `mcpServers` 形式に揃えた

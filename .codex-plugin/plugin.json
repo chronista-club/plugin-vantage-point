@@ -16,5 +16,7 @@
     "gui-tuning"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/chronista-club/plugin-vantage-point"
+  "homepage": "https://github.com/chronista-club/plugin-vantage-point",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
 }
