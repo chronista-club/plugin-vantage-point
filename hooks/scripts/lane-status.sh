@@ -8,6 +8,11 @@
 
 set -euo pipefail
 
+# Hosts may launch hooks outside the project. Resolve the event cwd first.
+EVENT_CWD=$(python3 -c 'import json,sys; d=json.load(sys.stdin); p=d.get("cwd"); assert isinstance(p,str) and p; print(p)' 2>/dev/null) || exit 0
+cd "$EVENT_CWD" 2>/dev/null || exit 0
+
+
 # vp コマンドの存在チェック
 if ! command -v vp &>/dev/null; then
   exit 0

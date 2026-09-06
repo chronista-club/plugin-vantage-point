@@ -1,16 +1,17 @@
 ---
 name: dev-flow
-description: VP の lane orchestration による並列開発フロー — hearing → 議論 → spec memory → handoff → 並列追跡 → merge の 6 phase。「並列開発」「handoff」「lane」「並列 lane」「control surrender」「dev flow」「Sub」等のキーワードで invoke
-version: 0.4.1
-tags:
-  - dev-flow
-  - orchestration
-  - lane
-  - memory-first
-  - parallel-dev
-  - handoff
-  - control-surrender
+description: VP の lane orchestration による並列開発フロー — hearing → 議論 → spec memory → handoff
+  → 並列追跡 → merge の 6 phase。「並列開発」「handoff」「lane」「並列 lane」「control surrender」「dev flow」「Sub」等のキーワードで
+  invoke
+metadata:
+  version: 0.24.0
+  tags: dev-flow, orchestration, lane, memory-first, parallel-dev, handoff, control-surrender
 ---
+
+## ホスト共通の読み方
+
+このディレクトリが共有定義の正本。Claude Code は `.claude-plugin`、Codex は `.codex-plugin` から同じ skills を読む。Grok CLI は Claude 互換形式を対象とするが実機確認待ち。
+本文中の `Agent`、`Bash`、`Read` や MCP の名前は Claude 表記の例。利用中のホストで提供された同等のツールを発見して使う。存在しないツール・モデル・実行結果を仮定しない。`${CLAUDE_PLUGIN_ROOT}` の資料パスは、この skill から辿れるプラグインルートに読み替える。
 
 # VP Dev Flow — lane × wire × memory
 
