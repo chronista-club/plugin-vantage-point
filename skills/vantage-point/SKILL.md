@@ -3,7 +3,7 @@ name: vantage-point
 description: AI ネイティブ開発環境 — board 視覚化、並列 lane 展開、wire inter-agent 通信、dev-flow orchestration、GUI
   live tuning を実現する MCP server。Claude Code 用 dashboard tool
 metadata:
-  version: "0.26.0"
+  version: "0.27.0"
   tags: dashboard, board, mcp, inter-agent, lane, dev-flow, gui-tuning
 ---
 

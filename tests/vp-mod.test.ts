@@ -6,8 +6,10 @@ import {
   DIFF_BASH_RE,
   diffMarkdownOf,
   identityOf,
+  mcpTextOf,
   nudgeLineOf,
   oneLine,
+  showItemIdOf,
   splitDiffByFile,
   summarizeCall,
 } from '../hooks/vp-mod'
@@ -150,5 +152,18 @@ describe('diffMarkdownOf', () => {
     const body = ['diff --git a/x b/x', ...Array.from({ length: 300 }, (_, i) => `+${i}`)].join('\n')
     const md = diffMarkdownOf(body, '', [], null)
     expect(md?.markdown).toContain('… (+181 行)')
+  })
+})
+
+describe('showItemIdOf / mcpTextOf', () => {
+  test('VP 0.71+ の show 応答から id を拾う', () => {
+    expect(showItemIdOf('Content pinned to the board. id=ee3c111c-7cb1-4edd-ae29-4530c5a44bc7')).toBe('ee3c111c-7cb1-4edd-ae29-4530c5a44bc7')
+  })
+  test('旧 daemon（id 無し）は null', () => {
+    expect(showItemIdOf('Content pinned to the board.')).toBeNull()
+  })
+  test('MCP result の text block を繋ぐ', () => {
+    expect(mcpTextOf({ content: [{ type: 'text', text: 'a' }, { type: 'image' }, { type: 'text', text: 'b' }] })).toBe('a\nb')
+    expect(mcpTextOf({})).toBe('')
   })
 })
