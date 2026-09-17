@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.26.0] - 2026-09-17
+
+- feat(vp-mod): **diff → board** — Edit / Write / NotebookEdit と差分を動かしうる Bash（`DIFF_BASH_RE`）の後、および turn の終わりに `git diff`（uncommitted 全体 + 未追跡一覧）を board の固定 pane `diff`（`vp pane show --pane-id diff`）に貼る。触った file を先頭、file 120 行 / 全体 30,000 字で切る。差分ゼロで pane を閉じる
+- feat(vp-mod): **daemon guard** — lane の中から daemon を止める Bash（`vp daemon stop|restart` / `vp restart-all` / `VP_SWAP_RESTART_DAEMON=1` / `launchctl bootout|kickstart|unload`）を `tool.call` で deny し、理由を model に返す。lane の claude は daemon の子なので通すと自分ごと落ちる（vantage-point CLAUDE.md の ⚠️ を構造に降ろした）
+- feat(vp-mod): **turn の終わり** — `turn.complete` で now-line に `✓ <answer 先頭行>`（中断は `⏹ 中断`）。console（tui）で最後の tool 名が残り続けないように
+- refactor(vp-mod): hook は queue に積むだけにし、`vp` / `git` の spawn は `session.start` で立てた `$.clock.every(250ms)` の drain が dispatch の外で回す（hook の dispatch には budget があり、捨てられると `next.signal` で中断されるため）。now-line は最新だけ、diff は 1 回に畳む
+- test: `DAEMON_KILL_RE` / `DIFF_BASH_RE` / `splitDiffByFile` / `diffMarkdownOf` の純関数 test を追加（bun test 21 件）。実測（2.1.274、`-p` 経路）: Write → 未追跡 1 件の pane 表示 312 ms → `rm` 後の pane close 531 ms、deny は model が理由を述べて次へ進み 1 turn
+- fix(changelog): 0.25.0 の release で `## [Unreleased]` の空節（0.22.0 の下に元からあった）まで `## [0.25.0]` に置換され、見出しが二重になっていたのを除去
+
 ## [0.25.0] - 2026-09-17
 
 - feat: **Claude Mods（function hooks）の hooks module `hooks/vp-mod.ts`** を追加。`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` の claude だけが読む（early access。Claude Code 2.1.274 で実測、それ以前の版は未確認）。
@@ -32,8 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: 語彙を **Main/Sub** へ全面同期（VP #1003 と対）— `performer` → `sub`（`add_sub` / `delete_sub` / `sub_status` / `kind: "sub"`）、表記は Main lane / Sub。識別子（予約名 `root`、wire address）は不変
 - 移行表に performer → sub 段を追記。歴史記述（旧 address 形・旧 `LaneKind`）は当時の語のまま維持
 
-
-## [0.25.0] - 2026-09-17
 
 ## [0.21.1] - 2026-07-28
 

@@ -1,7 +1,16 @@
 // hooks/vp-mod.ts の純関数 test（bun test）。hook 本体は `claude plugin validate` と実機で見る。
 import { describe, expect, test } from 'bun:test'
 
-import { identityOf, nudgeLineOf, oneLine, summarizeCall } from '../hooks/vp-mod'
+import {
+  DAEMON_KILL_RE,
+  DIFF_BASH_RE,
+  diffMarkdownOf,
+  identityOf,
+  nudgeLineOf,
+  oneLine,
+  splitDiffByFile,
+  summarizeCall,
+} from '../hooks/vp-mod'
 
 describe('identityOf', () => {
   test('main / 旧予約名は agent@<repo>', () => {
@@ -54,5 +63,92 @@ describe('nudgeLineOf', () => {
   test('空・壊れた JSON は null', () => {
     expect(nudgeLineOf('{"count":0,"messages":[]}')).toBeNull()
     expect(nudgeLineOf('not json')).toBeNull()
+  })
+})
+
+describe('DAEMON_KILL_RE（lane の中から daemon を止める command）', () => {
+  test('止める側は捕まえる', () => {
+    for (const c of [
+      'vp daemon stop',
+      'vp daemon restart --if-running',
+      'vp restart-all',
+      'VP_SWAP_RESTART_DAEMON=1 mise run app:swap',
+      'cd ~/repos/x && VP_SWAP_RESTART_DAEMON=1 mise run app:swap',
+      'launchctl kickstart -k gui/501/club.chronista.vp',
+    ]) {
+      expect(DAEMON_KILL_RE.test(c), c).toBe(true)
+    }
+  })
+  test('止めない側は通す', () => {
+    for (const c of ['vp daemon status', 'vp daemon start', 'mise run app:swap', 'mise run daemon', 'vp ps', 'vp now "x"']) {
+      expect(DAEMON_KILL_RE.test(c), c).toBe(false)
+    }
+  })
+})
+
+describe('DIFF_BASH_RE（差分を動かしうる Bash）', () => {
+  test('git / formatter / in-place 編集は貼り直す', () => {
+    for (const c of ['git checkout -- a.rs', 'cargo fmt --all', "sed -i '' 's/a/b/' x", 'bun run build', 'mise run check']) {
+      expect(DIFF_BASH_RE.test(c), c).toBe(true)
+    }
+  })
+  test('読むだけの command は貼り直さない', () => {
+    for (const c of ['ls -la', 'cat README.md', 'echo hi', 'vp lane list']) {
+      expect(DIFF_BASH_RE.test(c), c).toBe(false)
+    }
+  })
+})
+
+const DIFF_TWO_FILES = [
+  'diff --git a/src/a.rs b/src/a.rs',
+  'index 1..2 100644',
+  '--- a/src/a.rs',
+  '+++ b/src/a.rs',
+  '@@ -1 +1 @@',
+  '-old',
+  '+new',
+  'diff --git a/README.md b/README.md',
+  'index 3..4 100644',
+  '--- a/README.md',
+  '+++ b/README.md',
+  '@@ -1 +1,2 @@',
+  ' # t',
+  '+more',
+  '',
+].join('\n')
+
+describe('splitDiffByFile', () => {
+  test('diff --git を境に file ごとに割る', () => {
+    const files = splitDiffByFile(DIFF_TWO_FILES)
+    expect(files.map(f => f.path)).toEqual(['src/a.rs', 'README.md'])
+    expect(files[0]?.body.startsWith('diff --git a/src/a.rs')).toBe(true)
+  })
+  test('空なら空配列', () => {
+    expect(splitDiffByFile('')).toEqual([])
+  })
+})
+
+describe('diffMarkdownOf', () => {
+  test('触った file を先頭に、file ごとの diff fence、件数を title に', () => {
+    const md = diffMarkdownOf(DIFF_TWO_FILES, ' 2 files changed', [], 'README.md')
+    expect(md?.title).toBe('diff · 2 files')
+    const first = md!.markdown.indexOf('### README.md')
+    const second = md!.markdown.indexOf('### src/a.rs')
+    expect(first).toBeGreaterThan(-1)
+    expect(first).toBeLessThan(second)
+    expect(md!.markdown).toContain('```diff\ndiff --git a/README.md')
+  })
+  test('untracked は一覧で出し、件数に含める', () => {
+    const md = diffMarkdownOf('', '', ['new.txt'], null)
+    expect(md?.title).toBe('diff · 1 file')
+    expect(md?.markdown).toContain('新規（未追跡）: `new.txt`')
+  })
+  test('差分ゼロは null（pane を閉じる合図）', () => {
+    expect(diffMarkdownOf('', '', [], null)).toBeNull()
+  })
+  test('長い file は行数で切って残りを示す', () => {
+    const body = ['diff --git a/x b/x', ...Array.from({ length: 300 }, (_, i) => `+${i}`)].join('\n')
+    const md = diffMarkdownOf(body, '', [], null)
+    expect(md?.markdown).toContain('… (+181 行)')
   })
 })
