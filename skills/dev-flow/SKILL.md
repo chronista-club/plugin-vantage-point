@@ -4,7 +4,7 @@ description: VP の lane orchestration による並列開発フロー — hearin
   → 並列追跡 → merge の 6 phase。「並列開発」「handoff」「lane」「並列 lane」「control surrender」「dev flow」「Sub」等のキーワードで
   invoke
 metadata:
-  version: 0.24.0
+  version: "0.26.0"
   tags: dev-flow, orchestration, lane, memory-first, parallel-dev, handoff, control-surrender
 ---
 

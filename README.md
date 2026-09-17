@@ -95,6 +95,11 @@ VP の外（`VP_REPO` / `VP_LANE` が無い）で起動された claude では�
 |---|---|
 | `vp now` の自動化 | `turn.start` / `tool.call` から now-line の下地を書く（`Edit src/a.rs` / `Bash テスト実行` / MCP tool 名）。AI が手で `vp now` を打ったら 2 分は mod が黙る（手打ち優先） |
 | wire の受領 ack | VP の nudge（`📨 wire: … message_id=…`）が prompt に入った瞬間に `vp wire recv` → `vp wire ack` を済ませ、prompt 本文を「本文 + ack 済み」に書き換える（生 JSON は context）。ack 忘れ → 再 nudge → 二重配送を構造的に消す |
+| diff → board | Edit / Write / NotebookEdit と、差分を動かしうる Bash（git / fmt / sed / cargo / bun …）の後、turn の終わりに `git diff`（uncommitted 全体 + 未追跡一覧）を board の固定 pane `diff` に貼る（触った file を先頭、file 120 行 / 全体 30k 字で切る）。差分ゼロで pane を閉じる |
+| daemon guard | lane の中から daemon を止める Bash（`vp daemon stop\|restart` / `vp restart-all` / `VP_SWAP_RESTART_DAEMON=1` / `launchctl bootout\|kickstart\|unload`）を deny し、理由（自分ごと落ちる、kitty から打ってもらう）を model に返す |
+| turn の終わり | `turn.complete` で now-line に `✓ <answer 先頭行>`（中断は `⏹ 中断`）。console（tui）で最後の tool 名が残り続けないように |
+
+hook は queue に積むだけで、`vp` / `git` の spawn は `session.start` で立てた `$.clock.every` の drain が dispatch の外で回す（now-line は最新だけ、diff は 1 回に畳む）。
 
 daemon との橋は `$.process.run(["vp", …])` 一本（VP の transport は Unison(QUIC) なので `$.http` は届かない。CLI が daemon RPC の唯一の公認入口）。
 
