@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.27.0] - 2026-09-17
+
+- fix(vp-mod): **diff → board が item を積み上げていた**のを根治。`vp pane show --pane-id diff` の `pane_id` は dead field（doc 52 §7、board は per-lane 1 枚の stack）で、refresh のたびに新しい item が増え、`vp pane close` も board には効かなかった（0.26.0 の spike は `exit=0` だけ見て item 数を数えていなかった）。貼り付けを `$.mcp.call("vantage-point", …)` に寄せ、初回 `show` の応答（VP 0.71+ が `id=<uuid>` を返す）で id を控えて以後は `update`（doc 52 §5）で 1 枚を差し替える。差分ゼロは item を消す API が無いので「✓ 差分なし（clean）」に書き換えて残す。id を返さない旧 daemon では 1 枚貼って以後は貼らない（積み上げない）
+- test: `showItemIdOf` / `mcpTextOf` を追加（bun test 24 件）。実測（2.1.274、`-p`）: `$.mcp.call show` 564〜866 ms
+
 ## [0.26.0] - 2026-09-17
 
 - feat(vp-mod): **diff → board** — Edit / Write / NotebookEdit と差分を動かしうる Bash（`DIFF_BASH_RE`）の後、および turn の終わりに `git diff`（uncommitted 全体 + 未追跡一覧）を board の固定 pane `diff`（`vp pane show --pane-id diff`）に貼る。触った file を先頭、file 120 行 / 全体 30,000 字で切る。差分ゼロで pane を閉じる
