@@ -1,0 +1,12 @@
+{
+  "name": "plugin-vantage-point",
+  "private": true,
+  "description": "dev tooling for hooks/vp-mod.ts (Claude Mods): bun test + tsc. The plugin itself needs none of this at run time.",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
