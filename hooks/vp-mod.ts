@@ -57,8 +57,12 @@ export const DIFF_BASH_RE = /\b(git|cargo|rustfmt|fmt|sed|patch|mv|rm|cp|bun|npm
  */
 export const DAEMON_KILL_RE =
   /\bvp\s+(?:daemon\s+(?:stop|restart)|restart-all)\b|\bVP_SWAP_RESTART_DAEMON=1\b|\blaunchctl\s+(?:bootout|kickstart|unload)\b/u
-/** board の diff pane（repo で 1 枚、差し替え） */
-const DIFF_PANE_ID = 'diff'
+/** board の diff item の title（`update` は title を保つので固定。件数は本文の見出しに出す） */
+const DIFF_TITLE = 'diff'
+/** VP の MCP server 名（`/mcp` に出る名前 = plugin の `.mcp.json` の key） */
+const VP_MCP_SERVER = 'vantage-point'
+/** MCP `show` の応答文から貼った item の id を拾う（VP 0.71+ が `id=<uuid>` を付ける） */
+const SHOW_ID_RE = /\bid=([0-9a-fA-F-]{8,})\b/u
 /** diff markdown の上限（file ごとの行数 / 全体の文字数 — board を重くしない） */
 const DIFF_FILE_MAX_LINES = 120
 const DIFF_TOTAL_MAX_CHARS = 30_000
@@ -76,8 +80,10 @@ let pendingNow: string | null = null
 /** 貼り直したい diff（`touched` = 直前に触った file、先頭に出す。drain が 1 回に畳む） */
 let pendingDiff: { touched: string | null } | null = null
 let isDraining = false
-/** diff pane を開いているか（差分ゼロで閉じるため） */
-let isDiffPaneOpen = false
+/** board 上の diff item の id（初回 `show` の応答から。以後は `update` で 1 枚を差し替える） */
+let diffItemId: string | null = null
+/** `show` が id を返さなかった（VP 0.70 以前）— 差し替えられないので、積み上げないよう以後は貼らない */
+let isDiffShowWithoutId = false
 
 /**
  * `VP_REPO` / `VP_LANE` から身元を導く（純関数）。Main は `agent@<repo>`、Sub は
@@ -195,6 +201,19 @@ export function diffMarkdownOf(
   return { title, markdown }
 }
 
+/** MCP result の text block を繋ぐ（純関数） */
+export function mcpTextOf(result: { content?: readonly { type?: string; text?: string }[] }): string {
+  return (result.content ?? [])
+    .filter(b => b.type === 'text' && typeof b.text === 'string')
+    .map(b => b.text as string)
+    .join('\n')
+}
+
+/** MCP `show` の応答文から item id を拾う（純関数）。無ければ null（旧 daemon） */
+export function showItemIdOf(text: string): string | null {
+  return SHOW_ID_RE.exec(text)?.[1] ?? null
+}
+
 /** 診断 1 行（`VP_MOD_TRACE` 指定時のみ file に出す。`$.fs.write` は全量書きなので溜めて書く） */
 async function log($: EngineInterface, line: string): Promise<void> {
   if (!tracePath) return
@@ -272,20 +291,36 @@ async function refreshDiff($: EngineInterface, touched: string | null): Promise<
     const others = await $.process.run(['git', 'ls-files', '--others', '--exclude-standard'], { timeoutMs: 10_000 })
     const untracked = others.exitCode === 0 ? others.stdout.split('\n').filter(l => l.trim() !== '') : []
     const md = diffMarkdownOf(full.stdout, stat.stdout, untracked, touched)
+    // board は per-lane 1 枚の stack で、`show` は毎回新しい item を積む（`--pane-id` は dead
+    // field、doc 52 §7）。1 枚を保つには初回 `show` の id を控えて以後 `update`（doc 52 §5）。
+    // item を消す API は無いので、差分ゼロは「差分なし」に書き換えて残す。
     if (md === null) {
-      if (isDiffPaneOpen) {
-        const r = await $.process.run(['vp', 'pane', 'close', DIFF_PANE_ID], { timeoutMs: 5_000 })
-        isDiffPaneOpen = false
-        await log($, `diff pane close ${Date.now() - t0}ms exit=${r.exitCode}`)
+      if (diffItemId !== null) {
+        const r = await $.mcp.call(VP_MCP_SERVER, 'update', { id: diffItemId, content: '## diff\n\n✓ 差分なし（clean）' })
+        await log($, `diff clean ${Date.now() - t0}ms isError=${r.isError === true}`)
       }
       return
     }
-    const r = await $.process.run(
-      ['vp', 'pane', 'show', '--pane-id', DIFF_PANE_ID, '--title', md.title, '--format', 'markdown', md.markdown],
-      { timeoutMs: 5_000 },
-    )
-    isDiffPaneOpen = r.exitCode === 0
-    await log($, `diff ${Date.now() - t0}ms exit=${r.exitCode} ${md.title} ${md.markdown.length} chars${r.stderr ? ` stderr=${oneLine(r.stderr, 120)}` : ''}`)
+    if (diffItemId !== null) {
+      const r = await $.mcp.call(VP_MCP_SERVER, 'update', { id: diffItemId, content: md.markdown })
+      if (r.isError === true) {
+        // id が消えた（board clear 等）→ 次は貼り直す
+        diffItemId = null
+        await log($, `diff update failed ${Date.now() - t0}ms ${oneLine(mcpTextOf(r), 120)}`)
+        return
+      }
+      await log($, `diff update ${Date.now() - t0}ms ${md.title} ${md.markdown.length} chars`)
+      return
+    }
+    if (isDiffShowWithoutId) {
+      await log($, `diff skip (daemon が id を返さない: 1 枚目で止める) ${md.title}`)
+      return
+    }
+    const r = await $.mcp.call(VP_MCP_SERVER, 'show', { content: md.markdown, content_type: 'markdown', title: DIFF_TITLE })
+    const text = mcpTextOf(r)
+    diffItemId = r.isError === true ? null : showItemIdOf(text)
+    if (r.isError !== true && diffItemId === null) isDiffShowWithoutId = true
+    await log($, `diff show ${Date.now() - t0}ms isError=${r.isError === true} id=${diffItemId ?? '-'} ${md.title} ${md.markdown.length} chars`)
   } catch (err) {
     await log($, `diff failed ${Date.now() - t0}ms ${String(err)}`)
   }
