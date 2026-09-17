@@ -2,7 +2,7 @@
 name: rename-session
 description: LM Studio のローカルモデルから日本語セッション名を生成して提示する。
 metadata:
-  version: "0.24.0"
+  version: "0.26.0"
 ---
 
 # 日本語セッション名

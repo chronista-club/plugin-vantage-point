@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(vp-mod): hook は queue に積むだけにし、`vp` / `git` の spawn は `session.start` で立てた `$.clock.every(250ms)` の drain が dispatch の外で回す（hook の dispatch には budget があり、捨てられると `next.signal` で中断されるため）。now-line は最新だけ、diff は 1 回に畳む
 - test: `DAEMON_KILL_RE` / `DIFF_BASH_RE` / `splitDiffByFile` / `diffMarkdownOf` の純関数 test を追加（bun test 21 件）。実測（2.1.274、`-p` 経路）: Write → 未追跡 1 件の pane 表示 312 ms → `rm` 後の pane close 531 ms、deny は model が理由を述べて次へ進み 1 turn
 - fix(changelog): 0.25.0 の release で `## [Unreleased]` の空節（0.22.0 の下に元からあった）まで `## [0.25.0]` に置換され、見出しが二重になっていたのを除去
+- fix(ci): 全 skill の `metadata.version` を plugin version に揃える（`test_distribution` の規則。0.25.0 の release commit は skill が 0.24.0 のままで nightly の Validate が落ちていた）
 
 ## [0.25.0] - 2026-09-17
 
