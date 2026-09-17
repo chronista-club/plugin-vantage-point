@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [0.25.0] - 2026-09-17
 
 - feat: **Claude Mods（function hooks）の hooks module `hooks/vp-mod.ts`** を追加。`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` の claude だけが読む（early access。Claude Code 2.1.274 で実測、それ以前の版は未確認）。
   - `vp now` の自動化 — `turn.start` / `tool.call` から now-line の下地を書く。AI の手打ち `vp now` を優先（2 分間は mod が黙る）。書き込みは chain の外で直列（順序を守り、古い依頼は間引く）。実測: `vp now` 1 回 130〜330 ms、chain には乗らない
@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 移行表に performer → sub 段を追記。歴史記述（旧 address 形・旧 `LaneKind`）は当時の語のまま維持
 
 
-## [Unreleased]
+## [0.25.0] - 2026-09-17
 
 ## [0.21.1] - 2026-07-28
 

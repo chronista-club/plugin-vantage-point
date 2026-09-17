@@ -1,7 +1,7 @@
 {
   "name": "vantage-point",
   "description": "AI-native development environment — board visualization, parallel lanes, wire inter-agent messaging, dev-flow orchestration, and GUI live tuning for Claude Code and Codex",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "author": {
     "name": "Chronista Club",
     "url": "https://github.com/chronista-club"
