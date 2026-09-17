@@ -1,5 +1,8 @@
 {
   "description": "Vantage Point Dashboard + Lane hooks",
+  "modules": [
+    "./vp-mod.ts"
+  ],
   "hooks": {
     "SessionStart": [
       {

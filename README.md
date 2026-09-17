@@ -85,6 +85,28 @@ lane address は **`<repo>/root` / `<repo>/<name>`**（`/Sub/` セグメント�
 | `vantage-point` | MCP ツール 26 個、語彙、アーキテクチャ、典型シナリオ |
 | `dev-flow` | lane orchestration による並列開発フロー 6 phase |
 
+## Claude Mods（function hooks、early access）
+
+`hooks/vp-mod.ts` は Claude Code の **Mods**（TypeScript function hooks、early access。2.1.274 で実測）で VP と繋ぐ hooks module。
+`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` を付けて起動した claude だけが読む（未設定なら従来の command hook のみ）。
+VP の外（`VP_REPO` / `VP_LANE` が無い）で起動された claude では何もしない。
+
+| 何を | どう |
+|---|---|
+| `vp now` の自動化 | `turn.start` / `tool.call` から now-line の下地を書く（`Edit src/a.rs` / `Bash テスト実行` / MCP tool 名）。AI が手で `vp now` を打ったら 2 分は mod が黙る（手打ち優先） |
+| wire の受領 ack | VP の nudge（`📨 wire: … message_id=…`）が prompt に入った瞬間に `vp wire recv` → `vp wire ack` を済ませ、prompt 本文を「本文 + ack 済み」に書き換える（生 JSON は context）。ack 忘れ → 再 nudge → 二重配送を構造的に消す |
+
+daemon との橋は `$.process.run(["vp", …])` 一本（VP の transport は Unison(QUIC) なので `$.http` は届かない。CLI が daemon RPC の唯一の公認入口）。
+
+```bash
+# 試す（作業ツリーを直接読ませる）
+CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir ~/repos/plugin-vantage-point
+# 診断: hook の入口ごとに 1 行ずつ書く
+VP_MOD_TRACE=/tmp/vp-mod.trace CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude …
+```
+
+開発: `bun test`（純関数）/ `tsc -p tsconfig.json`（`types/claude-code.d.ts` は `/plugin-types` の出力。Claude Code 更新後は再生成する）/ `claude plugin validate .`（`$` の呼び先と env 読み書きの棚卸しが出る。`$` を渡せるのは **file top-level の function 宣言だけ**）。
+
 ## MCP Tools（全 26 個）
 
 ### board
