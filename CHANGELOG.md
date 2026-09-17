@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.25.0] - 2026-09-17
+
+- feat: **Claude Mods（function hooks）の hooks module `hooks/vp-mod.ts`** を追加。`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` の claude だけが読む（early access。Claude Code 2.1.274 で実測、それ以前の版は未確認）。
+  - `vp now` の自動化 — `turn.start` / `tool.call` から now-line の下地を書く。AI の手打ち `vp now` を優先（2 分間は mod が黙る）。書き込みは chain の外で直列（順序を守り、古い依頼は間引く）。実測: `vp now` 1 回 130〜330 ms、chain には乗らない
+  - wire の受領 ack — VP の nudge 文言を `prompt.submit` で検知し、`vp wire recv` → `vp wire ack` を済ませ、prompt 本文を「本文 + ack 済み」に書き換える（生 JSON は context に添える）。実測（`-p` 経路）: 検知から ack まで約 420 ms、model は MCP の wire tool を呼ばず 1 turn で応答
+  - VP の外では何もしない（`VP_REPO` / `VP_LANE` 不在 = null）。daemon との橋は `$.process.run(["vp", …])` のみ
+- test: `tests/vp-mod.test.ts`（bun test、純関数）と `tsconfig.json`（`types/claude-code.d.ts` = `/plugin-types` の出力）を追加。CI に bun test / tsc を追加
+- docs: README に「Claude Mods」節。host-support に `hooks.json` の `modules` key（Claude 専用、他 host は無視する前提）を明記
+
 ## [0.24.0] - 2026-09-06
 
 - 新しい plugin-vantage-point リポジトリを正本とし、Claude Code / Codex の共有 skills と配布定義を追加。
@@ -24,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 移行表に performer → sub 段を追記。歴史記述（旧 address 形・旧 `LaneKind`）は当時の語のまま維持
 
 
-## [Unreleased]
+## [0.25.0] - 2026-09-17
 
 ## [0.21.1] - 2026-07-28
 
