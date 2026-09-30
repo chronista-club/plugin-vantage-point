@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.27.1] - 2026-10-01
+
+- fix(vp-mod): wire の nudge で **flow_handoff の task（`text` 無し、`title` + `task_spec`）が「(本文なし: 既に読まれた message か、recv が空)」と出ていた**。`nudgeLineOf` が `body.text` しか見ていなかったため。model には context の生 JSON で内容が届いていたので会話は成立していたが、画面の表示だけが誤っていた（2026-09-30、mako が chat で気づいた）。本文の field は vp-app の WirePanel `preview` と同じ順（`summary` → `task_spec` → `text` → `message` → `subject`）で拾い、`title` があれば見出しにして改行で本文を続ける（now-line は先頭行だけ）
+- test: `nudgeLineOf` に title + task_spec / fallback 順 / 本文無しの 2 件を追加（bun test 26 件）
+
 ## [0.27.0] - 2026-09-17
 
 - fix(vp-mod): **diff → board が item を積み上げていた**のを根治。`vp pane show --pane-id diff` の `pane_id` は dead field（doc 52 §7、board は per-lane 1 枚の stack）で、refresh のたびに新しい item が増え、`vp pane close` も board には効かなかった（0.26.0 の spike は `exit=0` だけ見て item 数を数えていなかった）。貼り付けを `$.mcp.call("vantage-point", …)` に寄せ、初回 `show` の応答（VP 0.71+ が `id=<uuid>` を返す）で id を控えて以後は `update`（doc 52 §5）で 1 枚を差し替える。差分ゼロは item を消す API が無いので「✓ 差分なし（clean）」に書き換えて残す。id を返さない旧 daemon では 1 枚貼って以後は貼らない（積み上げない）

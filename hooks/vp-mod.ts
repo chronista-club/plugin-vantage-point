@@ -137,8 +137,15 @@ export function summarizeCall(e: { tool: string } & Record<string, unknown>, bas
 }
 
 /**
- * `vp wire recv` の JSON から now-line 用の一行を作る（純関数）。
- * `📨 <from>: <text>`。形が読めなければ null（呼び手が既定に落とす）。
+ * wire body の中で「本文」として見せる field の順（vp-app の WirePanel `preview` と同じ）。
+ * wire body は自由 JSON で、chat の nudge は `text`、flow_handoff は `title` + `task_spec` で来る。
+ */
+const WIRE_BODY_KEYS = ['summary', 'task_spec', 'text', 'message', 'subject'] as const
+
+/**
+ * `vp wire recv` の JSON から chat / now-line 用の文を作る（純関数）。
+ * `📨 <from>: <title か本文>`、title と本文が両方あれば改行して本文を続ける
+ * （now-line は `enqueueNow` が先頭行だけ使う）。形が読めなければ null（呼び手が既定に落とす）。
  */
 export function nudgeLineOf(recvStdout: string): string | null {
   try {
@@ -146,10 +153,15 @@ export function nudgeLineOf(recvStdout: string): string | null {
     if (typeof parsed !== 'object' || parsed === null) return null
     const messages = (parsed as { messages?: unknown }).messages
     if (!Array.isArray(messages) || messages.length === 0) return null
-    const first = messages[0] as { from?: unknown; body?: { text?: unknown } }
-    const text = typeof first.body?.text === 'string' ? first.body.text : ''
+    const first = messages[0] as { from?: unknown; body?: Record<string, unknown> }
+    const body = first.body ?? {}
+    const str = (k: string): string => (typeof body[k] === 'string' ? (body[k] as string).trim() : '')
+    const title = str('title')
+    const text = WIRE_BODY_KEYS.map(str).find((v) => v !== '') ?? ''
+    if (title === '' && text === '') return null
     const from = typeof first.from === 'string' ? first.from : 'wire'
-    return text === '' ? null : `📨 ${from}: ${text}`
+    if (title === '') return `📨 ${from}: ${text}`
+    return text === '' ? `📨 ${from}: ${title}` : `📨 ${from}: ${title}\n${text}`
   } catch {
     return null
   }
