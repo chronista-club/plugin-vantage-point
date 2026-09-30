@@ -66,6 +66,19 @@ describe('nudgeLineOf', () => {
     expect(nudgeLineOf('{"count":0,"messages":[]}')).toBeNull()
     expect(nudgeLineOf('not json')).toBeNull()
   })
+  test('task handoff（text 無し、title + task_spec）は title を見出しに本文を続ける', () => {
+    // 2026-09-30 の実物: flow_handoff の body は text を持たず title / task_spec で来る。
+    // text だけ見ると「本文なし」と出るのに、context の生 JSON で内容は届いていた
+    const out = JSON.stringify({ count: 1, messages: [{ from: 'agent@nexus', body: {
+      category: 'command', kind: 'task', title: 'branch-step-naming を実装する', task_spec: '# 見出し\n\n1. creo を読む' } }] })
+    expect(nudgeLineOf(out)).toBe('📨 agent@nexus: branch-step-naming を実装する\n# 見出し\n\n1. creo を読む')
+  })
+  test('title も text も無ければ WirePanel と同じ順で本文らしい field を拾う', () => {
+    const out = JSON.stringify({ count: 1, messages: [{ from: 'x', body: { summary: '要約', message: '無視' } }] })
+    expect(nudgeLineOf(out)).toBe('📨 x: 要約')
+    const none = JSON.stringify({ count: 1, messages: [{ from: 'x', body: { category: 'event' } }] })
+    expect(nudgeLineOf(none)).toBeNull()
+  })
 })
 
 describe('DAEMON_KILL_RE（lane の中から daemon を止める command）', () => {
