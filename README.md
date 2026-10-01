@@ -90,6 +90,7 @@ lane address は **`<repo>/root` / `<repo>/<name>`**（`/Sub/` セグメント�
 `hooks/vp-mod.ts` は Claude Code の **Mods**（TypeScript function hooks、early access。2.1.274 で実測）で VP と繋ぐ hooks module。
 `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` を付けて起動した claude だけが読む（未設定なら従来の command hook のみ）。
 VP の外（`VP_REPO` / `VP_LANE` が無い）で起動された claude では何もしない。
+Codex は `modules` key を受け付けないので、Codex manifest は `hooks/codex-hooks.json`（command hooks だけ）を読む。中身は `hooks/hooks.json` の `hooks` と同一（テストで検査）。詳細は [host-support](docs/host-support.md)。
 
 | 何を | どう |
 |---|---|
