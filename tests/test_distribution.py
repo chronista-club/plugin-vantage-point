@@ -39,3 +39,17 @@ class Distribution(unittest.TestCase):
                         self.assertEqual(hook['type'],'command')
                         for target in re.findall(r'\$\{CLAUDE_PLUGIN_ROOT\}/([^"\s]+)',hook['command']):
                             self.assertTrue((ROOT/target).is_file(),target)
+            for module in json.loads(path.read_text()).get('modules',[]):
+                self.assertTrue((path.parent/module).is_file(),module)
+
+    def test_codex_hooks_file_has_only_fields_codex_accepts(self):
+        # Codex の hooks.json パーサは deny_unknown_fields（description / hooks だけ）。Claude Mods の
+        # `modules` を持つ hooks/hooks.json を Codex に読ませると /hooks に parse issue が出る。
+        # Codex manifest の `hooks` が指す file は command hooks だけを持ち、中身は Claude 側と同じにする。
+        codex=json.loads((ROOT/'.codex-plugin/plugin.json').read_text())
+        self.assertEqual(codex.get('hooks'),'./hooks/codex-hooks.json')
+        codex_hooks=json.loads((ROOT/'hooks/codex-hooks.json').read_text())
+        self.assertLessEqual(set(codex_hooks),{'description','hooks'})
+        claude_hooks=json.loads((ROOT/'hooks/hooks.json').read_text())
+        self.assertIn('modules',claude_hooks,'Claude 側は modules を持ち続ける')
+        self.assertEqual(codex_hooks['hooks'],claude_hooks['hooks'],'command hooks の中身は両ホストで同じ')

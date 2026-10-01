@@ -1,0 +1,27 @@
+{
+  "description": "Vantage Point Dashboard + Lane hooks (Codex: command hooks only — Claude Mods の modules は hooks/hooks.json 側)",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v vp >/dev/null 2>&1 && vp wire hook-check || true",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/lane-status.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [],
+    "PostToolUse": []
+  }
+}
