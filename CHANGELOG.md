@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [0.27.2] - 2026-10-01
 
 - fix(codex): **Codex の `/hooks` に `unknown field \`modules\`` の parse issue が出て VP の hook が読まれなかった**のを修正。Codex の hooks.json パーサは `description` / `hooks` 以外を拒否する（codex-rs `hooks/src/schema.rs`、`deny_unknown_fields`）。`.codex-plugin/plugin.json` の `hooks` に `./hooks/codex-hooks.json`（command hooks だけ）を指定し、Claude 用 `hooks/hooks.json`（`modules` 付き）はそのまま。Codex は manifest に `hooks` があればデフォルトの `hooks/hooks.json` を読まない。codex 0.159.2 の `codex exec` で、0.27.0 では warning が出て修正版では出ないことを実測
 - fix(manifest): `.codex-plugin/plugin.json` の version が 0.27.0 のままで `test_distribution` が落ちていたのを 0.27.1 に揃える
