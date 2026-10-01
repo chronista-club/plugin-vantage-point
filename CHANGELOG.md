@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+- fix(codex): **Codex の `/hooks` に `unknown field \`modules\`` の parse issue が出て VP の hook が読まれなかった**のを修正。Codex の hooks.json パーサは `description` / `hooks` 以外を拒否する（codex-rs `hooks/src/schema.rs`、`deny_unknown_fields`）。`.codex-plugin/plugin.json` の `hooks` に `./hooks/codex-hooks.json`（command hooks だけ）を指定し、Claude 用 `hooks/hooks.json`（`modules` 付き）はそのまま。Codex は manifest に `hooks` があればデフォルトの `hooks/hooks.json` を読まない。codex 0.159.2 の `codex exec` で、0.27.0 では warning が出て修正版では出ないことを実測
+- fix(manifest): `.codex-plugin/plugin.json` の version が 0.27.0 のままで `test_distribution` が落ちていたのを 0.27.1 に揃える
+- test: `test_codex_hooks_file_has_only_fields_codex_accepts` — Codex 用 file のキーが `description` / `hooks` だけで、`hooks` の中身が Claude 用と同一であること。`hooks.json` の `modules` が指す file の存在検査も追加
+- docs: host-support / README に Codex のホスト別 hooks 定義と再 trust の注意
+
 ## [0.27.1] - 2026-10-01
 
 - fix(vp-mod): wire の nudge で **flow_handoff の task（`text` 無し、`title` + `task_spec`）が「(本文なし: 既に読まれた message か、recv が空)」と出ていた**。`nudgeLineOf` が `body.text` しか見ていなかったため。model には context の生 JSON で内容が届いていたので会話は成立していたが、画面の表示だけが誤っていた（2026-09-30、mako が chat で気づいた）。本文の field は vp-app の WirePanel `preview` と同じ順（`summary` → `task_spec` → `text` → `message` → `subject`）で拾い、`title` があれば見出しにして改行で本文を続ける（now-line は先頭行だけ）
