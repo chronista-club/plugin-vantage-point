@@ -15,7 +15,8 @@ import {
 } from '../hooks/vp-mod'
 
 describe('identityOf', () => {
-  test('main / 旧予約名は agent@<repo>', () => {
+  test('lead / 旧予約名は agent@<repo>', () => {
+    expect(identityOf('vantage-point', 'lead')?.wire).toBe('agent@vantage-point')
     expect(identityOf('vantage-point', 'main')?.wire).toBe('agent@vantage-point')
     expect(identityOf('vantage-point', 'root')?.wire).toBe('agent@vantage-point')
     expect(identityOf('vantage-point', 'conductor')?.wire).toBe('agent@vantage-point')
@@ -24,7 +25,7 @@ describe('identityOf', () => {
     expect(identityOf('vantage-point', 'modtest')?.wire).toBe('agent@vantage-point/modtest')
   })
   test('env が欠けていれば VP 外 = null', () => {
-    expect(identityOf(undefined, 'main')).toBeNull()
+    expect(identityOf(undefined, 'lead')).toBeNull()
     expect(identityOf('vantage-point', '')).toBeNull()
   })
 })

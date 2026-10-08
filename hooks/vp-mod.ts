@@ -45,8 +45,8 @@ const NOW_MAX_CHARS = 60
 const DRAIN_EVERY_MS = 250
 /** VP の nudge 文言（`📨 wire: … message_id=<id> …`）。delivery_actor::nudge_text と対 */
 const NUDGE_RE = /📨 wire:.*message_id=([A-Za-z0-9_-]+)/u
-/** 旧世代の Main 予約名 — VP 本体 `wire_address_from_env` と同じ扱い */
-const MAIN_LANE_NAMES = new Set(['main', 'root', 'conductor'])
+/** lead lane の予約名（現行 `lead` + 旧世代 main / root / conductor）— VP 本体 `wire_address_from_env` と同じ扱い */
+const LEAD_LANE_NAMES = new Set(['lead', 'main', 'root', 'conductor'])
 /** 編集系 tool（この後に diff を貼り直す） */
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
 /** 差分を動かしうる Bash（git 操作 / formatter / in-place 編集 / package 系）。他は turn.complete の保険で拾う */
@@ -91,7 +91,7 @@ let isDiffShowWithoutId = false
  */
 export function identityOf(repo: string | undefined, lane: string | undefined): Identity | null {
   if (!repo || !lane) return null
-  const wire = MAIN_LANE_NAMES.has(lane) ? `agent@${repo}` : `agent@${repo}/${lane}`
+  const wire = LEAD_LANE_NAMES.has(lane) ? `agent@${repo}` : `agent@${repo}/${lane}`
   return { repo, lane, wire }
 }
 
