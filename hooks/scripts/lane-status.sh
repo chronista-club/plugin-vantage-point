@@ -46,7 +46,7 @@ if [ -n "$IN_LANE" ]; then
 ${LANE_LIST}
 \`\`\`
 
-lane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。
+lane address は \`<repo>/lane/<name>\` (開発起点 lane の予約名は \`lead\`。旧 root / main も受理)。
 管理: vp lane ls --detail / vp lane rm <name> / vp lane status
 EOF
 )
@@ -61,8 +61,8 @@ else
 ${LANE_LIST}
 \`\`\`
 
-lane address は \`<repo>/root\` / \`<repo>/<name>\` (v0.56+ で \`/performer/\` は撤去)。
-管理: vp lane ls --detail / vp lane new <name> <branch> / vp lane rm <name>
+lane address は \`<repo>/lane/<name>\` (開発起点 lane の予約名は \`lead\`。旧 root / main も受理)。
+管理: vp lane ls --detail / vp lane new <name> [branch] / vp lane rm <name>
 EOF
 )
 fi
