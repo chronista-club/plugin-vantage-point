@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+- docs: **skills / reference / README を VP v0.83 の実装に揃える**（team-b deep review 2026-10-10 の指摘）。hooks は 0.27.3 で `lead` に追随済みだったが、文書側は `root` のまま `lead` が一度も出ていなかった
+  - 予約名 `root` → **`lead`**（#1191）。ただし `list_lanes` の `kind` 引数（`root`）、`flow_progress` の `root` キー、「root session」は本体側の契約・語なので据え置き、その旨を注記
+  - lane address の正規形を **`<repo>/lane/<name>`** に（#1000。2 分節は受理される旧形）
+  - lane 作成の既定 branch を `<git-user>/<name>` → **`wip/<name>`**、name は `[a-z0-9-]+` で大文字 / `_` は拒否（design 73、#1157）。`vp lane new <name> [branch]` の branch は省略可
+  - `list_lanes` の戻り値を実測の形に（`address` はオブジェクト、`kind` と tmux session は返らない、`sessions` / `slots` / `branch` が付く）。`flow_progress` は lead が top-level `root`、`flow_state` は sub だけ
+  - `lane_url`（#1184）を追加して 27 tool に。`vp wire send --world` → `--node`、`vp port` を削除、`vp pane delete` を CLI-only 表に追加
+  - dev-flow に「lane と branch の対応」節 — lead lane は `nightly` に立ち、sub は `wip/<slug>` を origin/nightly から切る。**lead ブランチは作らない**（mako 裁定 2026-10-10）
+  - hooks/scripts/lane-status.sh の SessionStart 文言（v0.21 のまま `<repo>/root` だった）と vp-mod.ts のコメントも同期
+
 ## [0.27.3] - 2026-10-09
 
 - fix(hooks): **lane の予約名 `lead` を受理**（VP 本体の main → lead rename、vantage-point #PR 追随）。`identityOf` の予約名集合に `lead` を加え、旧世代（main / root / conductor）はそのまま受理。これが無いと新 VP 配下の hook が `agent@<repo>/lead` という実在しない宛先を名乗り、wire の ack / now-line が無音で外れる

@@ -5,8 +5,8 @@
 Vantage Point は **board（貼る台）**、 **lane（作業台）** 管理、 **wire** inter-agent 通信、 **dev-flow** orchestration、 **GUI live tuning** を提供する MCP サーバーです。
 
 **MCP サーバー名**: `vantage-point`
-**対応 VP バージョン**: **v0.57+**
-**実ツール数**: **26**（SSOT = `crates/vantage-point/src/mcp.rs` + `src/mcp/{editor,layout}.rs` + `src/generated/agent_tools.rs`。後者の SSOT は `crates/vantage-point/schema/vp-agent.kdl`）
+**対応 VP バージョン**: **v0.57+**（この文書の記述基準は **v0.83**。`lane_url` は v0.81+、`show` の `id=` 応答は v0.71+）
+**実ツール数**: **27**（SSOT = `crates/vantage-point/src/mcp.rs` + `src/mcp/{canvas,lane,editor,layout}.rs` + `src/generated/agent_tools.rs`。後者の SSOT は `crates/vantage-point/schema/vp-agent.kdl`）
 
 repo runtime が起動していない場合、MCP ツール呼び出し時に自動的に起動します（自動起動リレー）。
 
@@ -48,19 +48,23 @@ GUI 容器 = Pane（app 専用語）。部品 = component / 常駐 = service。�
 
 | 種別 | 形 | 例 |
 |---|---|---|
-| **lane address** | `<repo>/root` / `<repo>/<name>` | `vantage-point/root` / `vantage-point/feat-api` |
+| **lane address** | `<repo>/lane/<name>`（lead は `<repo>/lane/lead`） | `vantage-point/lane/lead` / `vantage-point/lane/feat-api` |
 | **wire address** | `agent@<repo>` / `agent@<repo>/<name>` | `agent@vantage-point` / `agent@vantage-point/feat-api` |
 | **board inbox** | `board@<repo>/<name>` | `board@vantage-point/feat-api` |
 | **repo scope** | `runner@<repo>` | `runner@vantage-point` |
 | **machine scope** | `devices@machine` | `devices@machine` |
 
-> ⚠️ **lane address から `/performer/` セグメントが消えました**（doc 44 P2）。旧 `<repo>/performer/<name>` / `<repo>/conductor` は `LanePool::parse_address` が受理して新形へ正規化しますが、**新規に書く記述は新形で**。
+> ⚠️ lane address の正規形は **`<repo>/lane/<name>`**（#1000。`list_lanes` の `address.key` がこの形）。2 分節形 `<repo>/<name>` と旧 `<repo>/sub/<name>` / `<repo>/performer/<name>` / `<repo>/conductor` は `parse_address` が受理して正規化しますが、**新規に書く記述は正規形で**。1 分節の bare `<repo>` は parse されません。
 >
-> `root` は **役割ではなく予約名** です。`LaneKind`（Conductor / Performer）は撤去され、「lane は役割状態を持たない」(doc 44 D4) になりました。root lane はたまたま開発起点である lane、という関係に退化しています。wire address 側は不変。
+> `lead` は **役割ではなく予約名** です。`LaneKind`（Conductor / Performer）は撤去され、「lane は役割状態を持たない」(doc 44 D4) になりました。lead lane はたまたま開発起点である lane、という関係に退化しています。wire address 側は不変（`agent@<repo>` が lead）。
+
+> **予約名は `lead`**（VP v0.83、#1191）。旧世代 `conductor` → `root` → `main` は legacy として受理され `lead` に正規化されます。`lead` が 1 つ決まれば他は **sub**（対の語は sub のまま。follow / worker 等は立てない）。
+>
+> **一括置換してはいけない 3 つ**: `list_lanes` の `kind` 引数は今も `'root' | 'sub'`（`kind: "lead"` はエラーにならず空配列が返る）。`flow_progress` の lead lane は top-level の **`root` キー**に入る。lane の代表 session は今も **「root session」**（`sessions.root`）。これらは lane の予約名ではなく本体側の契約・語なのでそのまま。
 
 ---
 
-## ツール一覧（カテゴリ別、全 26 個）
+## ツール一覧（カテゴリ別、全 27 個）
 
 | カテゴリ | ツール | 数 |
 |----------|--------|---|
@@ -167,11 +171,11 @@ CLI pair: `vp shot`（**CLI が上位互換**: `--region sidebar|main|full` / `-
 現 repo の vp-app の active lane を切り替え。
 
 ```typescript
-mcp__vantage-point__switch_lane({ lane: "root" })      // 開発起点 lane
+mcp__vantage-point__switch_lane({ lane: "lead" })      // 開発起点 lane
 mcp__vantage-point__switch_lane({ lane: "feat-api" })  // Sub lane
 ```
 
-`lane` は lane token: **`root`** または Sub 名。
+`lane` は lane token: **`lead`** または sub 名（旧名 `root` / `main` も受理される）。
 
 > 人間の view を無断で切り替えないこと（ROTO / CLI 駆動の view 制御向け）。
 
@@ -188,7 +192,7 @@ Sub lane を作成（lane clone + spawn）。cwd から repo を解決します�
 ```typescript
 mcp__vantage-point__add_sub({
   name: "feat-api",
-  branch: "mako/feat-api",   // 省略時 `<git-user>/<sanitized-name>` を auto-derive
+  // branch 省略時は `wip/feat-api`（branch-step。段を変えたいときだけ `exp/feat-api` 等を明示）
   agent: "claude",           // claude(default) / codex / grok / opencode / shell
   base: "origin/nightly",    // worktree 分岐元 ref
   model: "opus"              // lane の claude model alias
@@ -197,15 +201,15 @@ mcp__vantage-point__add_sub({
 
 | パラメータ | 型 | 必須 | 説明 |
 |-----------|-----|------|------|
-| `name` | string | ✓ | Sub 名（短い slug）。lane address の `<name>` 部分 |
-| `branch` | string | - | 省略時 server が `git config user.name` から auto-derive |
+| `name` | string | ✓ | sub 名 = slug。**`[a-z0-9-]+` で先頭は英数字**。大文字と `_` は丸めずに**拒否**される（design 73）。lane address の `<name>`、既定 branch の末尾、worktree dir 名と一致 |
+| `branch` | string | - | 省略時 **`wip/<name>`**（branch-step、#1157。git user からの導出は撤去）。`exp/` / `hotfix/` 等を手で切る用途で明示 |
 | `agent` | string | - | **engine**: `claude`（default）/ `codex` / `grok` / `opencode` / `shell` |
-| `base` | string | - | 分岐元 ref。**未 push の local branch も可**（root の feature branch 上の未 merge 土台を配れる）。省略時 `sub-files.kdl` の base-ref → `origin/HEAD` → `main` |
-| `model` | string | - | claude model alias（`opus` / `sonnet` / `haiku` / `claude-fable-5`）。省略時は config の `default-lane-model`、無記録なら engine 側の user 既定 |
+| `base` | string | - | 分岐元 ref。**未 push の local branch も可**（lead の feature branch 上の未 merge 土台を配れる）。省略時 `sub-files.kdl` の base-ref → `origin/HEAD` → `main` |
+| `model` | string | - | claude model alias（`opus` / `sonnet` / `haiku` / `claude-fable-5-1`）。省略時は config の `default-lane-model`、無記録なら engine 側の user 既定 |
 
 > ⚠️ **`stand` パラメータは `agent` に改名され、値 `echoes` は `claude` になりました**（v0.56 命名エピック 6/9）。`agent` は engine の選択であり、**engine は働き手の不変属性**です（engine を替える操作は存在しない — 会話の文脈は engine 間を移動できないため。乗り換えたければ新しい lane を立てる）。
 
-CLI pair: `vp lane new <name> <branch> [--isolation worktree|clone] [--base <ref>] [--model <alias>]`（`--isolation` は CLI のみ）
+CLI pair: `vp lane new <name> [branch] [--isolation worktree|clone] [--base <ref>] [--model <alias>]`（branch 省略時 `wip/<name>`。`--isolation` は CLI のみ。`vp lane fork` も同じ既定）
 
 ### delete_sub
 
@@ -226,21 +230,43 @@ CLI pair: `vp lane rm <name>`
 
 ```typescript
 mcp__vantage-point__list_lanes({
-  kind: "sub",   // "root" | "sub"（省略時 両方）
+  kind: "sub",   // "root" | "sub"（省略時 両方）。lead を指す値は今も "root"（"lead" は空配列）
   state: "running"     // running | spawning | exiting | dead（省略時 全状態）
 })
 ```
 
-**各 lane の戻り値**: `address`, `kind`, `state`, `agent`, `pid`, `cwd`, tmux session, `sub_status`, `mailbox_addresses`
+**各 lane の戻り値**（v0.83 実測）: `address`（**オブジェクト** `{repo, name, key}`、`key` = `<repo>/lane/<name>`）, `id`, `state`, `agent`, `agent_name`, `pid`, `cwd`, `branch`, `cc_session_id`, `engine_session_id`, `created_at`, `is_self`, `sessions`（`{focused, root, sessions:[…]}` — session 一覧と各 session の mode / model / settings）, `slots`, `sub_status`（sub のみ）, `mailbox_addresses`
+
+> `kind` は**戻り値には含まれない**（filter 引数としてだけ存在。LaneInfo から撤去済み）。tmux session も返らない。本体の tool description はこの点が古いまま
 
 - `mailbox_addresses.agent` — その lane の会話 inbox（例: `agent@vantage-point/feat-api`）
 - `mailbox_addresses.board` — その lane の board inbox（例: `board@vantage-point/feat-api`）
 
 **top-level の戻り値**: `repo_addresses`（例: `runner@vantage-point`）、`machine_addresses`（例: `devices@machine`）
 
-> ⚠️ `kind` の値が **`conductor` → `root`**、mailbox の **`canvas` → `board`** に変わりました。
+> ⚠️ `kind` の値が **`conductor` → `root`**、mailbox の **`canvas` → `board`** に変わりました。予約名が `lead` になった後も `kind` 引数は `root` のままです。
 
 CLI pair: `vp lane ls --detail`
+
+### lane_url
+
+lane に残る **永続ローカルリンク集**（CLI・MCP・sidebar 共通の store、#1184 / v0.81+）。server や agent を落としても残り、新しい lane へは**コピーされない**。
+
+```typescript
+mcp__vantage-point__lane_url({ action: "set", name: "dev", url: "http://localhost:5173", label: "Vite dev" })
+mcp__vantage-point__lane_url({ action: "list" })
+mcp__vantage-point__lane_url({ action: "rm", name: "dev" })
+mcp__vantage-point__lane_url({ action: "probe", name: "dev" })   // 接続確認（redirect は追わない）
+```
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `action` | `set` \| `list` \| `rm` \| `probe` | ✓ | `set` は `name` + `url`（+ 任意 `label`。省略時は既存 label を保持）、`rm` / `probe` は `name` |
+| `lane` | string | - | lane 名 または `<repo>/<lane>`。省略時 cwd から解決 |
+
+credential 無しの loopback HTTP(S) のみ。service を起こしたり browser を開いたりはしない。
+
+CLI pair: `vp lane url set|list|rm|probe [--lane <lane>]`
 
 ---
 
@@ -255,9 +281,8 @@ mcp__vantage-point__flow_handoff({
   name: "feat-api",
   task_spec: "# Task\nImplement endpoint X",
   mode: "auto",            // "hitl"(default) / "auto"
-  branch: "mako/feat-api",
   agent: "claude",         // claude(default) / codex / grok / opencode / shell
-  base: "origin/nightly",
+  base: "origin/nightly",  // branch は省略時 `wip/feat-api`
   model: "opus",           // 機械的作業=sonnet / 中核設計=opus
   nudge: true              // false = send のみ（完全 async）
 })
@@ -267,13 +292,27 @@ CLI pair: `vp flow handoff <name> --task-spec <file|-> [--mode auto|hitl] [--bra
 
 ### flow_progress
 
-全 lane（root + Subs）の `sub_status`（git ahead/behind/dirty/merged）と per-lane 未読 wire 数を 1 view で返す read-only 集約。cursor は触りません。
+全 lane（lead + subs）の `sub_status`（git ahead/behind/dirty/merged）と per-lane 未読 wire 数を 1 view で返す read-only 集約。cursor は触りません。
 
 ```typescript
 mcp__vantage-point__flow_progress()
 ```
 
-**各 lane の戻り値**: `sub_status`, `unread_wire_count`, `flow_state`, `control_surrender`, `state_reason`, `last_state_transition_at`
+**戻り値の形**（v0.83 実測）:
+
+```jsonc
+{
+  "repo": "<repo>",
+  "root": { "address": "agent@<repo>", "unread_wire_count": 0, "unread_by_thread": {} },   // = lead lane。キー名は root のまま
+  "subs": [{
+    "name", "address", "state", "agent", "cwd", "sub_status",
+    "unread_wire_count", "unread_by_thread",
+    "flow_state", "control_surrender", "state_reason", "last_state_transition_at"
+  }]
+}
+```
+
+`flow_state` 以下 4 つは **sub だけ**が持つ（lead lane は top-level `root` に入り、flow_state を持たない）。
 
 `flow_state` は 6 state（server 側で derive）:
 
@@ -319,7 +358,7 @@ mcp__vantage-point__wire_send({
 
 > 送信者は自分の root message を未読として受け取りません。
 
-CLI pair: `vp wire send --to --body [--reply-to] [--category] [--world]`
+CLI pair: `vp wire send --to --body [--reply-to] [--category] [--node <node>]`（federation 送信は `--node`。`--world` は無い）
 
 ### wire_recv
 
@@ -528,6 +567,7 @@ VP は「同じ logic を MCP（AI 用）と CLI（人間用）の両方から e
 | `add_sub` | `vp lane new` |
 | `delete_sub` | `vp lane rm` |
 | `list_lanes` | `vp lane ls --detail` |
+| `lane_url` | `vp lane url set/list/rm/probe` |
 | `flow_handoff` | `vp flow handoff` |
 | `flow_progress` | `vp flow progress` |
 | `wire_send` / `recv` / `inbox` / `ack` / `thread` | `vp wire send` / `recv` / `inbox` / `ack` / `thread` |
@@ -549,6 +589,7 @@ VP は「同じ logic を MCP（AI 用）と CLI（人間用）の両方から e
 | `vp lane slots` / `slot-new` / `slot-close` | console slot（session ごとの窓）の増減 |
 | `vp lane last-session` / `resume-failed` | conversation resume の id 取得・失敗記録 |
 | `vp pane split` / `close` / `toggle` | pane 操作 |
+| `vp pane delete <item_id>` | board item を消す（#1139、v0.71+。MCP には無い） |
 | `vp file watch` / `unwatch` | ログの実時間監視 |
 | `vp wire watch` / `watch-supervised` / `discover` / `hook-check` / `deleg-thread` | 購読・federation discovery・hook・委譲観測 |
 | `vp now` | session の「今なにを」を 1 行報告（サブタスクの切れ目ごとに打つ想定） |
@@ -559,7 +600,7 @@ VP は「同じ logic を MCP（AI 用）と CLI（人間用）の両方から e
 
 ### `list_lanes` vs `vp ps` vs `vp lane ls`
 
-- **`list_lanes`** — 現 repo の全 lane（root + Subs）。`sub_status` / `mailbox_addresses` 付き
+- **`list_lanes`** — 現 repo の全 lane（lead + subs）。`sub_status` / `mailbox_addresses` 付き
 - **`vp ps`** — daemon 配下の全 repo runtime 一覧
 - **`vp lane ls`** — fs scan の簡易表示（runtime 不要）
 - **`vp lane ls --detail`** — `list_lanes` の CLI pair（runtime 稼働中のみ）
@@ -635,14 +676,15 @@ mcp__vantage-point__capture_window({ path: "/tmp/vp.png" })
 | `capture_canvas` | **`capture_window`** |
 | `show` の `pane_id` | **`scope`**（`lane` のみ） |
 | `add_performer` / `flow_handoff` の `stand: "echoes"` | **`agent: "claude"`** |
-| `list_lanes` の `kind: "conductor"` | **`kind: "root"`** |
+| `list_lanes` の `kind: "conductor"` | **`kind: "root"`**（予約名が `lead` になった後も引数はこの値） |
 | `mailbox_addresses.canvas` | **`mailbox_addresses.board`** |
-| lane address `<repo>/conductor` / `<repo>/performer/<name>` | **`<repo>/root` / `<repo>/<name>`** |
+| lane address `<repo>/conductor` / `<repo>/performer/<name>` | **`<repo>/lane/<name>`**（2 分節 `<repo>/<name>` は受理される旧形） |
+| 予約名 `root` / `main` | **`lead`**（2026-10-09、#1191。旧 3 世代は受理） |
 | `add_wing` / `add_worker` / `delete_wing` | `add_performer` / `delete_performer`（当時） |
-| `add_performer` / `delete_performer` / `performer_status` / `kind: "performer"` | **`add_sub` / `delete_sub` / `sub_status` / `kind: "sub"`**（Main/Sub 語彙、2026-08-16） |
+| `add_performer` / `delete_performer` / `performer_status` / `kind: "performer"` | **`add_sub` / `delete_sub` / `sub_status` / `kind: "sub"`**（lead / sub 語彙。2026-08-16 に Main/Sub、2026-10-09 に lead/sub） |
 | `tmux_split` / `tmux_capture` / `tmux_dashboard` / `tmux_agent_*` | `vp lane nudge` / `vp lane capture` |
 | `open_canvas` / `close_canvas` / `split_pane`（MCP） | vp-app 常駐 board + `vp pane split` |
-| `toggle_pane` / `close_pane` / `watch_file` / `unwatch_file` / `port_*` / `permission`（MCP） | CLI へ集約（`vp pane` / `vp file` / `vp port`） |
+| `toggle_pane` / `close_pane` / `watch_file` / `unwatch_file` / `port_*` / `permission`（MCP） | CLI へ集約（`vp pane` / `vp file`。`vp port` は存在しない） |
 | `eval_ruby` / `run_ruby` / `stop_ruby` / `list_ruby` | 削除 |
 | `capture_terminal` | `vp shot` |
 | `lane_nudge`（MCP） | 元から CLI のみ（`vp lane nudge`） |

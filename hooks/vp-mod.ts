@@ -86,7 +86,7 @@ let diffItemId: string | null = null
 let isDiffShowWithoutId = false
 
 /**
- * `VP_REPO` / `VP_LANE` から身元を導く（純関数）。Main は `agent@<repo>`、Sub は
+ * `VP_REPO` / `VP_LANE` から身元を導く（純関数）。lead は `agent@<repo>`、sub は
  * `agent@<repo>/<lane>`。どちらか欠けていれば VP 外 = null。
  */
 export function identityOf(repo: string | undefined, lane: string | undefined): Identity | null {
@@ -305,7 +305,7 @@ async function refreshDiff($: EngineInterface, touched: string | null): Promise<
     const md = diffMarkdownOf(full.stdout, stat.stdout, untracked, touched)
     // board は per-lane 1 枚の stack で、`show` は毎回新しい item を積む（`--pane-id` は dead
     // field、doc 52 §7）。1 枚を保つには初回 `show` の id を控えて以後 `update`（doc 52 §5）。
-    // item を消す API は無いので、差分ゼロは「差分なし」に書き換えて残す。
+    // MCP には item を消す tool が無い（CLI `vp pane delete` はある）ので、差分ゼロは「差分なし」に書き換えて残す。
     if (md === null) {
       if (diffItemId !== null) {
         const r = await $.mcp.call(VP_MCP_SERVER, 'update', { id: diffItemId, content: '## diff\n\n✓ 差分なし（clean）' })
