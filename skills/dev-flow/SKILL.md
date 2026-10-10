@@ -27,7 +27,7 @@ metadata:
 
 ## 中心原理 — lane は対等。役割は「control の所在」
 
-**VP v0.56 で `LaneKind`（Conductor / Performer）は撤去されました**（doc 44 D4「lane 自身は役割状態を持たない」）。lane は全て対等な作業台であり、`root` は *たまたま開発起点である* lane を指す**予約名**にすぎません。
+**VP v0.56 で `LaneKind`（Conductor / Performer）は撤去されました**（doc 44 D4「lane 自身は役割状態を持たない」）。lane は全て対等な作業台であり、`lead` は *たまたま開発起点である* lane を指す**予約名**にすぎません（VP v0.83 で `main` → `lead`、#1191。旧 `conductor` / `root` / `main` は受理される）。対の語は **sub**。
 
 これは dev-flow にとって破壊ではなく **純化**です。旧モデルは「Conductor という役割」と「control surrender という関係」を二重に持っていました。役割側が消えたことで、**control の所在だけが唯一の役割表現**になります。
 
@@ -38,11 +38,25 @@ metadata:
 
 実務上の帰結:
 
-- **orchestrate しているのは lane ではなく、その時点で control を握っている側** — root lane が常に orchestrator とは限らない。Sub が別の lane に handoff することもできる
+- **orchestrate しているのは lane ではなく、その時点で control を握っている側** — lead lane が常に orchestrator とは限らない。Sub が別の lane に handoff することもできる
 - **役割は固定されない** — control は surrender（手放す）と grab（握り直す）を繰り返す。それが orchestration そのもの
-- **address に役割は現れない** — `<repo>/root` も `<repo>/feat-api` も同じ形。`/Sub/` セグメントは撤去済み
+- **address に役割は現れない** — `<repo>/lane/lead` も `<repo>/lane/feat-api` も同じ形。`/sub/` セグメントは撤去済み（受理はされる）
 
 > ⚠️ ただし `add_sub` / `flow_handoff` という **tool 名には Sub が残っています**。これは「新しい lane を作って仕事を渡す」という**動詞**であって、作られた lane が特別な種族になるわけではありません。
+
+### lane と branch の対応 — lead ブランチは作らない
+
+lane は「場所」、branch は「段」（branch-step）。lead は役割なので branch 名にはしません。`main` lane が git の `main` と同字で衝突したから `lead` に改名した（#1191）のであって、`lead` branch を作ればその衝突を再生産するだけです。
+
+| 層 | 実体 | branch |
+|---|---|---|
+| lead lane | repo 本体の checkout + lead session | **`nightly`**（dev trunk）に立つ。commit より hearing / handoff / PR merge / release が仕事 |
+| sub lane | `.vp/lanes/<slug>` worktree | **`wip/<slug>`**（省略時の既定、design 73）→ `review/<slug>` で PR、base = **origin/nightly** |
+| 公開 | GitHub default | `main`（release 専用。hotfix だけ `hotfix/<slug>` で main へ） |
+
+- sub は nightly から切る。`base` の既定は `.vp/sub-files.kdl` の `base-ref` → `origin/HEAD`。GitHub default が main の repo は `base-ref "nightly"` を書いておく
+- lead session が自分で実験したいときは `spike/<slug>` を local で切る、または sub lane を 1 本増やす。常設の lead branch は「PR の無い WIP が nightly の横に溜まる場所」になる
+- lead checkout の branch を切り替えるのは lead session だけ。sub の agent は自分の worktree の中だけで checkout する
 
 ---
 
@@ -223,7 +237,7 @@ mcp__vantage-point__flow_handoff
   mode: "auto" | "hitl"      # default: hitl
   agent: "claude"            # claude(default) / codex / grok / opencode / shell
   model: "opus"              # 機械的=sonnet / 中核設計=opus
-  branch: "<user>/<slug>"    # 省略可（auto-derive）
+  # branch 省略時 wip/<slug>（branch-step）。slug は [a-z0-9-]+、大文字と _ は拒否
   base: "origin/nightly"     # 未 push の local branch も可
   nudge: true                # false = 完全 async（CLI flag は --no-nudge）
 ```
@@ -236,7 +250,7 @@ CLI: `vp flow handoff <slug> --task-spec <file|->`
 
 ```
 # 1. lane 作成
-vp lane new <slug> <user>/<slug>
+vp lane new <slug>              # branch 省略時 wip/<slug>、base は origin/nightly
   → worktree 作成 + agent auto spawn
   → zero-config で .mcp.json / CLAUDE.local.md / .env を auto-symlink
 
@@ -306,7 +320,8 @@ mcp__vantage-point__wire_send
 
 | 症状 | 原因 / 対処 |
 |---|---|
-| lane address が解決しない | `/Sub/` を付けている。v0.56+ は `<repo>/<name>` |
+| lane address が解決しない | 1 分節の bare `<repo>` を渡している。`<repo>/lane/<name>`（2 分節 `<repo>/<name>` も可） |
+| `add_sub` が `invalid sub name` で落ちる | name は `[a-z0-9-]+`。大文字 / `_` は丸めずに拒否される（design 73） |
 | `stand` param が弾かれる | `agent` に改名（値 `echoes` → `claude`） |
 | command msg が何度も nudge される | 受信側が `wire_ack` を忘れている（**受信 ≠ ack**） |
 | `flow_progress` が古い値を返す | read-only cache。最新は `wire_recv` 側で確認 |

@@ -19,7 +19,7 @@ metadata:
 VP は「ブラウザビューア」ではなく、開発体験そのものを構成する **6 つの柱**を提供します:
 
 1. **board 🧭** — markdown / HTML / URL / ログを貼る台。item は id を持ち、`update` で書き換えられる
-2. **lane** — 作業台（cwd / branch / board / layout を持つ checkout）。root + Subs の並列開発環境
+2. **lane** — 作業台（cwd / branch / board / layout を持つ checkout）。lead + subs の並列開発環境
 3. **wire** — repo 跨ぎ inter-agent 通信（永続 thread + delivery policy）
 4. **dev-flow** — `flow_handoff` / `flow_progress` で並列 orchestration
 5. **GUI live tuning** — `editor_*` / `layout_*` で AI が GUI を直接調律（HITL ループ）
@@ -62,13 +62,17 @@ GUI 容器 = Pane（app 専用語）。部品 = component / 常駐 = service。�
 
 | 種別 | 形 | 例 |
 |---|---|---|
-| **lane address** | `<repo>/root` / `<repo>/<name>` | `vantage-point/root` / `vantage-point/feat-api` |
+| **lane address** | `<repo>/lane/<name>`（lead は `<repo>/lane/lead`） | `vantage-point/lane/lead` / `vantage-point/lane/feat-api` |
 | **wire address** | `agent@<repo>` / `agent@<repo>/<name>` | `agent@vantage-point/feat-api` |
 | **board inbox** | `board@<repo>/<name>` | `board@vantage-point/feat-api` |
 
-> ⚠️ **lane address から `/performer/` セグメントが消えました**（doc 44 P2）。旧形 (`<repo>/conductor` / `<repo>/performer/<name>`) は parse 側が受理して正規化しますが、**新しく書く記述は新形で**。
+> ⚠️ lane address の正規形は **`<repo>/lane/<name>`**（#1000）。2 分節 `<repo>/<name>` と旧形 (`<repo>/sub/<name>` / `<repo>/conductor` / `<repo>/performer/<name>`) は parse 側が受理して正規化しますが、**新しく書く記述は正規形で**。
 >
-> **`root` は役割ではなく予約名**です。`LaneKind`（Conductor / Performer）は撤去され、「lane は役割状態を持たない」(doc 44 D4) になりました。lane は全て対等で、root lane は *たまたま開発起点である* lane にすぎません。orchestrate するかどうかは運用の話であって、lane の属性ではない。
+> **`lead` は役割ではなく予約名**です。`LaneKind`（Conductor / Performer）は撤去され、「lane は役割状態を持たない」(doc 44 D4) になりました。lane は全て対等で、lead lane は *たまたま開発起点である* lane にすぎません。orchestrate するかどうかは運用の話であって、lane の属性ではない。
+
+> **予約名は `lead`**（VP v0.83、#1191）。旧世代 `conductor` → `root` → `main` は legacy として受理され `lead` に正規化されます。`lead` が 1 つ決まれば他は **sub**（対の語は sub のまま。follow / worker 等は立てない）。
+>
+> **一括置換してはいけない 3 つ**: `list_lanes` の `kind` 引数は今も `'root' | 'sub'`（`kind: "lead"` はエラーにならず空配列が返る）。`flow_progress` の lead lane は top-level の **`root` キー**に入る。lane の代表 session は今も **「root session」**（`sessions.root`）。これらは lane の予約名ではなく本体側の契約・語なのでそのまま。
 
 ---
 
@@ -123,7 +127,7 @@ mcp__vantage-point__flow_handoff
   model: "opus"              # 機械的作業=sonnet / 中核設計=opus
 
 # 低レベル fallback
-mcp__vantage-point__add_sub  name: "feat-api", branch: "user/feat-api"
+mcp__vantage-point__add_sub  name: "feat-api"   # branch 省略時 wip/feat-api
 mcp__vantage-point__wire_send      to: ["agent@<repo>/feat-api"], body: { kind: "task", category: "command", task_spec: "..." }
 # nudge は CLI で（MCP に lane_nudge は無い）:
 #   vp lane nudge <repo>/feat-api "task が届いています。wire_recv で確認して着手。"
@@ -171,7 +175,7 @@ mcp__vantage-point__capture_window  path: "/tmp/vp.png"
 
 ---
 
-## MCP Tools 一覧（VP v0.57、全 26 個）
+## MCP Tools 一覧（VP v0.83 基準、全 27 個）
 
 ### board 🧭
 
@@ -182,7 +186,7 @@ mcp__vantage-point__capture_window  path: "/tmp/vp.png"
 | `read_board` | board の全 item を id / title / content_type / 全文つきで取得（newest-first） |
 | `clear` | board を clear |
 | `capture_window` | vp-app window 全体を PNG capture |
-| `switch_lane` | active lane 切替（`root` or Sub 名） |
+| `switch_lane` | active lane 切替（`lead` or sub 名） |
 
 ### lane
 
@@ -190,7 +194,8 @@ mcp__vantage-point__capture_window  path: "/tmp/vp.png"
 |------|------|
 | `add_sub` | Sub lane を作成（lane clone + spawn）。`agent` / `base` / `model` 指定可 |
 | `delete_sub` | Sub lane を片付け（`cleanup: false` で dir 残置） |
-| `list_lanes` | 全 lane 一覧（`sub_status` / `mailbox_addresses` / `repo_addresses` 付き）。`kind` = `root` \| `sub` |
+| `list_lanes` | 全 lane 一覧（`address` / `branch` / `sessions` / `sub_status` / `mailbox_addresses` / `repo_addresses` 付き）。filter 引数 `kind` = `root`（= lead） \| `sub` |
+| `lane_url` | lane に残る永続ローカルリンク集（`set` / `list` / `rm` / `probe`。CLI・sidebar と同じ store） |
 
 > lane への text 注入と console 読み取りは **CLI のみ**: `vp lane nudge <lane> <text>` / `vp lane capture <lane>`
 
@@ -284,7 +289,7 @@ daemon ⚙️ — 常駐、全 repo runtime を統括
         ├── board 🧭 — 貼る台（item は id を持つ）
         ├── runner 🌿 — Code Runner（process 管理）
         └── lane — 作業台（cwd / branch / board / layout を持つ checkout）
-              ├── root      — 開発起点 lane（予約名。役割ではない）
+              ├── lead      — 開発起点 lane（予約名。役割ではない。旧 root / main）
               └── <name>    — 並列 lane（worktree）
                     └── slot × 0..N — 1 lane に session が複数座れる（doc 46 P5）
                           agent: claude / codex / grok / opencode / shell
@@ -307,7 +312,7 @@ vp lane slot-new <lane>    # console をもう 1 枚立てる
 vp lane slot-close <lane>  # 1 枚閉じる
 ```
 
-> slot 操作は **CLI のみ**（MCP tool は無い）。`list_lanes` の返り値も現状は lane 粒度で、session 一覧は含みません（doc 54 R4「pane 一覧配信」で変わる予定）。
+> slot 操作は **CLI のみ**（MCP tool は無い）。`list_lanes` の各 lane には `sessions`（`focused` / `root` / `sessions[]`）と `slots` が入るので、session 一覧は MCP でも読めます。
 >
 > VP は更に「**働き手（worker）**」という identity 層（VP 発行 id の永久欠番 / 代表の自動継承と空位許容）へ向かっています（doc 54）。**モデルの物理（複数 session）は上記のとおり実装済み**で、未実装なのは identity 層 — 現状の session 鍵は `SessionKey`（lane 内の小整数、Reset で再利用）です。
 
@@ -356,7 +361,7 @@ vp lane slot-close <lane>  # 1 枚閉じる
 | `mcp_call timeout` | `restart` / `vp restart-all` |
 | `wire_*` が動かない | runtime 起動確認（`vp app start` → sidebar expand）、wire address を再確認（`agent@<repo>` / `agent@<repo>/<name>`） |
 | command msg が何度も nudge される | 受信側が `wire_ack` を忘れている |
-| lane address が「見つからない」 | `/Sub/` セグメントを付けていないか確認（v0.56+ は `<repo>/<name>`） |
+| lane address が「見つからない」 | 1 分節の bare `<repo>` は parse されない。`<repo>/lane/<name>`（または `<repo>/<name>`）で指定 |
 | `stand` パラメータが弾かれる | `agent` に改名済み（値 `echoes` → `claude`） |
 | `read_pane` / `list_canvas` / `capture_canvas` が無い | `read_board` / `capture_window` に統合・改名済み |
 | `editor_*` / `layout_*` が失敗する | **vp-app 稼働が前提**（`vp app start`） |
@@ -376,6 +381,6 @@ vp lane slot-close <lane>  # 1 枚閉じる
 ## 関連
 
 - **dev-flow skill**: `skills/dev-flow/SKILL.md` — 並列 orchestration の 6 phase
-- **詳細リファレンス**: `reference/mcp-tools.md` — 26 tool の完全な param
+- **詳細リファレンス**: `reference/mcp-tools.md` — 27 tool の完全な param
 - **VP リポジトリ**: https://github.com/chronista-club/vantage-point
 - 関連 memory: mental model（`mem_1CaVnfJRgWtuRgZD9yQSoV`）/ dev-flow overview（`mem_1CbUUzvguCptQPU4eWTKHx`）/ 命名エピック台帳（`mem_1CdQxvayZBB3E768g1mDbQ`）
