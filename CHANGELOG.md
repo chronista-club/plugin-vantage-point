@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-10-17
+
 - fix(hooks): `mise run app:swap:detached`（再起動 env 付きも可）の完全一致だけを daemon guard の例外にする。連結コマンドは拒否し、新しい入口を案内する。
 
 ## [0.27.3] - 2026-10-09
