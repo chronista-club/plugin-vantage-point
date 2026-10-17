@@ -359,13 +359,17 @@ export function register(on: On) {
   // 4. daemon guard — now-line の hook より先に登録する（deny なら next を呼ばない = 下は走らない）
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const command = String((e as Record<string, unknown>).command ?? '')
-    if (identity && DAEMON_KILL_RE.test(command)) {
+    // 完全一致のみ許可する。trim や $ anchor は末尾改行を許すので使わない。
+    const detached = command === 'mise run app:swap:detached' ||
+      command === 'VP_SWAP_RESTART_DAEMON=1 mise run app:swap:detached'
+    if (identity && !detached && (DAEMON_KILL_RE.test(command) || command.includes('app:swap:detached'))) {
       await log($, `deny daemon kill: ${oneLine(command, 120)}`)
       return {
         deny:
           `[vp-mod] この session は VP の lane（${identity.wire}）の中で動いていて、daemon の子プロセスです。` +
           ' daemon を止める command を通すと自分ごと落ちて、その後の start / swap に届きません。' +
-          ' この command は VP の外（kitty 等のターミナル）から mako に打ってもらってください。',
+          ' swap は `VP_SWAP_RESTART_DAEMON=1 mise run app:swap:detached` を単独で実行してください。' +
+          ' その他の daemon 操作は VP の外のターミナルから行ってください。',
       }
     }
     return next(e)
