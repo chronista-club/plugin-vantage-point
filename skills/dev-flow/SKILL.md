@@ -212,6 +212,25 @@ lane を作るとき `agent` param で engine を選べます:
 
 ---
 
+## task の段 — handoff spec の頭に必ず書く（2026-10-17）
+
+sub lane の権限は lane ではなく **task ごと**。orchestrator は `task_spec` の 1 行目付近に
+`段: A | B | C | 調査` を書く。書き忘れは **B 扱い**。lane は段を上げるのは自由（wire で一言）、
+下げるのは lead に聞く。軸は「壊れたときに戻せるか、誰を巻き込むか」。
+
+| 段 | 目安 | Ready 前の自己レビュー | PR | merge |
+|---|---|---|---|---|
+| A: 直し | 1 か所の修正 / doc / 設定値。revert 1 発で戻る | なし | 出す | lead |
+| B: 機能 | 複数ファイル / 新しい挙動 / UI | moody-blues 1 回。指摘と対応を PR 本文に | 出す | lead |
+| C: 危ないもの | daemon lifecycle / guard / protocol・wire の形 / plugin release / 実機 / 2 repo にまたがる | santa（moody-blues × sticky-fingers） | **draft** → lead レビュー後 ready | lead レビュー後 **user が可否** |
+| 調査 | 読む・実測する・設計案。何も変えない | — | 出さない（`spike/` or `exp/`、報告は wire） | — |
+
+全段共通: TDD・gate・Ready は証拠付き。禁止 = daemon 再起動 / swap / merge / 他 lane の worktree。
+**repo をまたぐ契約**（コマンド名・wire の形・API・mise の task 名）は相手側の**実物**で突き合わせてから Ready。
+正本は VP repo の `AGENTS.md`「sub lane の権限 — task の段」。
+
+---
+
 ## handoff 標準 pattern
 
 ### A. 推奨: `flow_handoff`（1 call）

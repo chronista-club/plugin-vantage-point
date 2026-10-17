@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+## [0.27.4] - 2026-10-17
+
+- docs(dev-flow): handoff spec の頭に task の段（A / B / C / 調査）を書く規約（#10。正本は VP の AGENTS.md）
+- fix(hooks): `mise run app:swap:detached`（再起動 env 付きも可）の完全一致だけを daemon guard の例外にする。連結コマンドは拒否し、新しい入口を案内する。
+
 ## [0.27.3] - 2026-10-09
 
 - fix(hooks): **lane の予約名 `lead` を受理**（VP 本体の main → lead rename、vantage-point #PR 追随）。`identityOf` の予約名集合に `lead` を加え、旧世代（main / root / conductor）はそのまま受理。これが無いと新 VP 配下の hook が `agent@<repo>/lead` という実在しない宛先を名乗り、wire の ack / now-line が無音で外れる

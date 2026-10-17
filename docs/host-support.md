@@ -15,3 +15,14 @@
 ## 移植版の検証（2026-09-06）
 
 共有定義・参照先・manifest 同期のテスト、Claude plugin validator、全共有 skill の quick_validate を通過。hook の cwd と JSON 出力の回帰テストを通過。GitHub の Validate workflow は nightly で成功。ホストへの実インストール・MCP 認証・実セッションの発火確認は未実施。
+
+## detached swap の daemon guard
+
+VP lane 内で `mise run app:swap:detached` または
+`VP_SWAP_RESTART_DAEMON=1 mise run app:swap:detached` を単独で実行した場合だけ許可する。
+空白の正規化や部分一致はせず、末尾改行・追加引数・shell 連結も例外に含めない。
+既存の daemon 停止検出は維持する。VP 本体に対応する mise task が必要。
+
+テストは `bun test tests/daemon-guard.test.ts`。実 hook を登録し、session identity を
+設定して、Bash dispatch の許可・拒否と案内文を検査する。変更の安定配布には
+両 manifest / skill metadata の版更新と main / tag の release が必要（この PR は Unreleased）。
