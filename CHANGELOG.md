@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.6] - 2026-10-19
+
+- docs: **skills / reference / README を VP v0.83 の実装に揃える**（team-b deep review 2026-10-10 の指摘）。hooks は 0.27.3 で `lead` に追随済みだったが、文書側は `root` のまま `lead` が一度も出ていなかった
+  - 予約名 `root` → **`lead`**（#1191）。ただし `list_lanes` の `kind` 引数（`root`）、`flow_progress` の `root` キー、「root session」は本体側の契約・語なので据え置き、その旨を注記
+  - lane address の正規形を **`<repo>/lane/<name>`** に（#1000。2 分節は受理される旧形）
+  - lane 作成の既定 branch を `<git-user>/<name>` → **`wip/<name>`**、name は `[a-z0-9-]+` で大文字 / `_` は拒否（design 73、#1157）。`vp lane new <name> [branch]` の branch は省略可
+  - `list_lanes` の戻り値を実測の形に（`address` はオブジェクト、`kind` と tmux session は返らない、`sessions` / `slots` / `branch` が付く）。`flow_progress` は lead が top-level `root`、`flow_state` は sub だけ
+  - `lane_url`（#1184）を追加して 27 tool に。`vp wire send --world` → `--node`、`vp port` を削除、`vp pane delete` を CLI-only 表に追加
+  - dev-flow に「lane と branch の対応」節 — lead lane は `nightly` に立ち、sub は `wip/<slug>` を origin/nightly から切る。**lead ブランチは作らない**（mako 裁定 2026-10-10）
+  - hooks/scripts/lane-status.sh の SessionStart 文言（v0.21 のまま `<repo>/root` だった）と vp-mod.ts のコメントも同期
+
 ## [0.27.5] - 2026-10-19
 
 - docs(vantage-point): **markdown の中の URL は `<…>` で囲む**（#12）。日本語の文で素の URL を書くと、board（`marked`）も Claude Code の terminal も GFM の自動リンクで URL の終わりを半角空白か `<` で決めるため、全角の「）」「、」と後ろの文、途中の code span までリンクに巻き込まれる（marked 18.1.0 で実測）。board に貼る時も返答でも `<…>` で囲み、囲めない所は URL の直後に半角空白を置く
