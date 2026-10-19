@@ -330,6 +330,19 @@ vp lane slot-close <lane>  # 1 枚閉じる
 | `log` | ログ形式（追記向け） |
 | `url` | 外部 URL を iframe 埋め込み |
 
+### markdown の中の URL は `<…>` で囲む
+
+日本語の文で URL を素のまま書くと、全角の「）」「、」と後ろの文までリンクに巻き込まれる。board (`marked`) も Claude Code の terminal も GFM の自動リンクで、URL の終わりを**半角の空白か `<`** で決めるため (末尾の `)` `.` を外す決まりは半角の記号にしか効かない)。日本語は空白で区切らないので、次の半角空白までが全部 URL になり、途中の `` `code` `` も飲み込まれる。
+
+```markdown
+❌ demo の web（http://localhost:13571）を建て直し、`/threads` が 200
+   → リンクは「http://localhost:13571）を建て直し、`/threads`」(marked 18 で実測)
+✅ demo の web（<http://localhost:13571>）を建て直し、`/threads` が 200
+```
+
+- board に貼る時も、mako への返答でも、URL は `<…>` で囲む。表の中など囲めない所は、URL の直後に半角の空白を置く
+- リンクにしない (見せるだけ) なら `` `http://…` ``
+
 ---
 
 ## wire delivery policy
