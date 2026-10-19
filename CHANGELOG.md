@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.6] - 2026-10-19
+
 - docs: **skills / reference / README を VP v0.83 の実装に揃える**（team-b deep review 2026-10-10 の指摘）。hooks は 0.27.3 で `lead` に追随済みだったが、文書側は `root` のまま `lead` が一度も出ていなかった
   - 予約名 `root` → **`lead`**（#1191）。ただし `list_lanes` の `kind` 引数（`root`）、`flow_progress` の `root` キー、「root session」は本体側の契約・語なので据え置き、その旨を注記
   - lane address の正規形を **`<repo>/lane/<name>`** に（#1000。2 分節は受理される旧形）
