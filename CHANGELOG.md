@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.5] - 2026-10-19
+
+- docs(vantage-point): **markdown の中の URL は `<…>` で囲む**（#12）。日本語の文で素の URL を書くと、board（`marked`）も Claude Code の terminal も GFM の自動リンクで URL の終わりを半角空白か `<` で決めるため、全角の「）」「、」と後ろの文、途中の code span までリンクに巻き込まれる（marked 18.1.0 で実測）。board に貼る時も返答でも `<…>` で囲み、囲めない所は URL の直後に半角空白を置く
+
 ## [0.27.4] - 2026-10-17
 
 - docs(dev-flow): handoff spec の頭に task の段（A / B / C / 調査）を書く規約（#10。正本は VP の AGENTS.md）
