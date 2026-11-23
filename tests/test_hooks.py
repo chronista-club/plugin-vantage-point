@@ -41,5 +41,32 @@ class Hooks(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(result.stdout,'')
 
+    def test_agy_session_start_outputs_inject_steps(self):
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp)
+            project = parent / 'go-fast-packing'
+            lane = project / '.vp/lanes/cad'
+            lane.mkdir(parents=True)
+            binary = parent / 'bin'
+            binary.mkdir()
+            vp = binary / 'vp'
+            vp.write_text('#!/bin/sh\nprintf \'%s\\t%s\\n\' "$PWD" \'cad\'\n')
+            vp.chmod(0o755)
+            env = dict(os.environ, PATH=str(binary)+os.pathsep+os.environ['PATH'])
+            hook = ROOT / 'hooks/scripts/lane-status.sh'
+            result = subprocess.run(
+                ['bash', str(hook)],
+                input=json.dumps({
+                    'hookEventName': 'SessionStart',
+                    'conversationId': 'conv-1',
+                    'workspacePaths': [str(lane)],
+                }),
+                text=True, cwd=parent, env=env, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads(result.stdout)
+            msg = data['injectSteps'][0]['systemMessage']['systemMessage']
+            self.assertIn(str(lane), msg)
+
 if __name__ == '__main__':
     unittest.main()
