@@ -8,14 +8,20 @@
 
 set -euo pipefail
 
-# Hosts may launch hooks outside the project. Resolve the event cwd first.
-EVENT_CWD=$(python3 -c 'import json,sys; d=json.load(sys.stdin); p=d.get("cwd"); assert isinstance(p,str) and p; print(p)' 2>/dev/null) || exit 0
+# Hosts may launch hooks outside the project. Resolve the event cwd first (Antigravity passes cwd or workspacePaths[0]).
+EVENT=$(cat)
+IS_AGY=$(printf '%s' "$EVENT" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d,dict); print("1" if any(k in d for k in ("hookEventName","conversationId","workspacePaths")) else "0")' 2>/dev/null) || exit 0
+EVENT_CWD=$(printf '%s' "$EVENT" | python3 -c 'import json,sys; d=json.load(sys.stdin); p=d.get("cwd"); wp=d.get("workspacePaths"); p=p if isinstance(p,str) and p else (wp[0] if isinstance(wp,list) and wp and isinstance(wp[0],str) else ""); assert p; print(p)' 2>/dev/null) || exit 0
 cd "$EVENT_CWD" 2>/dev/null || exit 0
 
+emit_empty() {
+  if [ "$IS_AGY" = "1" ]; then printf '{}\n'; fi
+  exit 0
+}
 
 # vp コマンドの存在チェック
 if ! command -v vp &>/dev/null; then
-  exit 0
+  emit_empty
 fi
 
 # lane 一覧を取得
@@ -23,7 +29,7 @@ LANE_LIST=$(vp lane ls 2>/dev/null || echo "")
 
 # lane が 0 件なら何もしない
 if [ -z "$LANE_LIST" ]; then
-  exit 0
+  emit_empty
 fi
 
 # 現在のディレクトリが lane 内かどうか判定
@@ -81,7 +87,20 @@ if [ -z "$escaped" ]; then
   escaped="\"${escaped%\\n}\""
 fi
 
-cat <<EOF
+if [ "$IS_AGY" = "1" ]; then
+  cat <<EOF
+{
+  "injectSteps": [
+    {
+      "systemMessage": {
+        "systemMessage": ${escaped}
+      }
+    }
+  ]
+}
+EOF
+else
+  cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
@@ -89,5 +108,6 @@ cat <<EOF
   }
 }
 EOF
+fi
 
 exit 0
